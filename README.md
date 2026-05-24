@@ -1,6 +1,8 @@
 # CP3407 Project — Singapore HDB Carpark Smart Recommender
 
+
 An intelligent, real-time parking recommendation system for Singapore's Housing & Development Board (HDB) carparks. The system ingests live government open data, runs geospatial queries against a PostGIS database, predicts future vacancy rates with a lightweight gradient-boosted ML model, and presents personalized top-N recommendations through an interactive map interface.
+
 
 ## Table of Contents
 
@@ -17,6 +19,7 @@ An intelligent, real-time parking recommendation system for Singapore's Housing 
 - [API Endpoints](#api-endpoints)
 - [Data Sources](#data-sources)
 - [License](#license)
+
 
 ## Architecture Overview
 
@@ -49,6 +52,7 @@ An intelligent, real-time parking recommendation system for Singapore's Housing 
 +---------------------------+  +--------------------------------+
 ```
 
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -61,14 +65,18 @@ An intelligent, real-time parking recommendation system for Singapore's Housing 
 | **Map Service** | OneMap API (Singapore Official Map) |
 | **DevOps** | Docker, GitHub Actions (CI/CD) |
 
+
 ## System Layers
+
 
 ### Frontend Layer
 
 The user-facing single-page application provides:
 
 - **Live Map View** — Invokes the browser Geolocation API to capture user GPS coordinates, renders the OneMap tile layer, and places color-coded markers (Green/Yellow/Red) on recommended HDB carparks.
+
 - **Recommendation Panel** — Displays the top 3-5 nearest or most available carparks in a structured list layout, with popup cards showing real-time vacancy stats and forecast hourly trends via Chart.js sparklines.
+
 
 ### Backend API Layer
 
@@ -77,6 +85,7 @@ Two core modules run inside a single FastAPI process:
 1. **Geospatial Router** — Accepts `(lat, lng)` from the frontend, executes a PostGIS `ST_DWithin` + kNN query to retrieve candidate carparks within a 1 km radius, and assembles candidate details for scoring.
 
 2. **Model Inference Engine** — Loads the serialized ML model into RAM at startup (`@app.on_event('startup')`), evaluates each candidate carpark against live temporal features (hour, day-of-week, holiday flag) and weather conditions (rain, overcast, clear), then runs a batch `model.predict(X_live)` returning per-carpark predicted vacancy rates. Target inference latency is under **10 ms**.
+
 
 ### Database Layer
 
@@ -89,12 +98,15 @@ PostgreSQL with PostGIS serves a dual role:
 
 A **GIST (Generalized Search Tree) spatial index** on the geometry column enables millisecond-range k-nearest-neighbor (kNN) lookups.
 
+
 ### Data Pipeline (ETL)
 
 A scheduled cron-job pipeline refreshes the database every **5 minutes**:
 
 1. **Ingestion** — Fetches live JSON from two government open-data endpoints:
+
    - HDB Carpark Availability API — real-time lot counts per carpark.
+
    - NEA Weather API — 2-hour nowcast weather conditions across Singapore weather stations.
 
 2. **Cleaning & Transformation** — Normalizes dirty/missing records; converts local **SVY21** (EPSG:3414) coordinate grids to generic **WGS84** (EPSG:4326) latitude/longitude; maps each carpark to its nearest weather station.
@@ -104,6 +116,7 @@ A scheduled cron-job pipeline refreshes the database every **5 minutes**:
 4. **Feature Derivation** — Extracts deterministic temporal attributes (`hour`, `day_of_week`, `is_weekend`, `is_public_holiday`).
 
 5. **Persistence** — Bulk-inserts cleaned records into PostgreSQL for real-time serving and periodic ML re-training.
+
 
 ### Machine Learning Pipeline
 
@@ -117,6 +130,7 @@ A lightweight regression pipeline predicts future lot availability rates (0.0 to
 | **Training Strategy** | 1 to 3 months of historical logs; single global model with `carpark_id` as a categorical feature to capture location-specific parking patterns. |
 | **Validation** | Time Series Split cross-validation to prevent look-ahead leakage; evaluated via **MAE** and **RMSE**. |
 | **Deployment** | Serialized artifact (`.joblib` or `.json`) loaded into FastAPI memory at startup; prediction runtime via `model.predict()` with under 10 ms latency. |
+
 
 ## Project Structure
 
@@ -153,41 +167,52 @@ CP3407-Project/
 └── README.md
 ```
 
+
 ## Getting Started
+
 
 ### Prerequisites
 
 - **Python** 3.11+
+
 - **Node.js** 18+
+
 - **PostgreSQL** 15+ with **PostGIS** extension
+
 - **Docker** (optional, for containerized setup)
+
 
 ### Local Development
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/LuoX11a/CP3407-Project.git
    cd CP3407-Project
    ```
 
 2. **Setup environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env with your PostgreSQL credentials and Data.gov.sg API keys
    ```
 
 3. **Start the database**
+
    ```bash
    docker-compose up -d postgres
    # Or connect to an existing PostgreSQL + PostGIS instance
    ```
 
 4. **Run database migrations**
+
    ```bash
    cd db && alembic upgrade head
    ```
 
 5. **Install backend dependencies and start API server**
+
    ```bash
    cd backend
    pip install -r requirements.txt
@@ -195,12 +220,14 @@ CP3407-Project/
    ```
 
 6. **Start the ETL scheduler**
+
    ```bash
    cd etl
    python scheduler.py
    ```
 
 7. **Install frontend dependencies and start dev server**
+
    ```bash
    cd frontend
    npm install
@@ -208,10 +235,12 @@ CP3407-Project/
    ```
 
 8. **Train the ML model (optional, first-time setup)**
+
    ```bash
    cd ml
    python train.py --months 3 --output model/carpark_predictor.joblib
    ```
+
 
 ### Docker (All-in-One)
 
@@ -219,11 +248,14 @@ CP3407-Project/
 docker-compose up --build
 ```
 
+
 ## API Endpoints
+
 
 ### `GET /api/v1/recommend`
 
 Returns top-N carpark recommendations for a given user location.
+
 
 **Query Parameters**
 
@@ -234,11 +266,13 @@ Returns top-N carpark recommendations for a given user location.
 | `n` | int | No | Number of results (default: 5, max: 10) |
 | `radius_m` | int | No | Search radius in metres (default: 1000) |
 
+
 **Example Request**
 
 ```
 GET /api/v1/recommend?lat=1.3521&lng=103.8198&n=5
 ```
+
 
 **Example Response**
 
@@ -266,13 +300,16 @@ GET /api/v1/recommend?lat=1.3521&lng=103.8198&n=5
 }
 ```
 
+
 ### `GET /api/v1/carpark/{id}`
 
 Returns detailed information and historical trends for a specific carpark.
 
+
 ### `GET /api/v1/health`
 
 Health-check endpoint returning database connectivity and model load status.
+
 
 ## Data Sources
 
@@ -285,6 +322,7 @@ This project uses Singapore government open data, accessed via [Data.gov.sg](htt
 | OneMap API | Official Singapore basemap tiles and geocoding | Static / On-demand |
 
 > All data is provided under the [Singapore Open Data Licence](https://data.gov.sg/open-data-licence).
+
 
 ## License
 
