@@ -1,7 +1,15 @@
-# CP3407 Project — Singapore HDB Carpark Smart Recommender
+# ParkGuideSG
 
 
 An intelligent, real-time parking recommendation system for Singapore's Housing & Development Board (HDB) carparks. The system ingests live government open data, runs geospatial queries against a PostGIS database, predicts future vacancy rates with a lightweight gradient-boosted ML model, and presents personalized top-N recommendations through an interactive map interface.
+
+## Team Members
+
+| Name | Student ID |
+|------|------------|
+| Renxian Tang | 14889930 |
+| Han-Wei Lin | 14775857 |
+| Lau Tsz Tsun | 13955562 |
 
 
 ## Table of Contents
@@ -82,7 +90,7 @@ The user-facing single-page application provides:
 
 Two core modules run inside a single FastAPI process:
 
-1. **Geospatial Router** — Accepts `(lat, lng)` from the frontend, executes a PostGIS `ST_DWithin` + kNN query to retrieve candidate carparks within a 1 km radius, and assembles candidate details for scoring.
+1. **Geospatial Router** — Accepts `(lat, lng)` from the frontend, executes a PostGIS `ST_DWithin` + kNN query to retrieve the nearest carparks, and assembles candidate details for scoring.
 
 2. **Model Inference Engine** — Loads the serialized ML model into RAM at startup (`@app.on_event('startup')`), evaluates each candidate carpark against live temporal features (hour, day-of-week, holiday flag) and weather conditions (rain, overcast, clear), then runs a batch `model.predict(X_live)` returning per-carpark predicted vacancy rates. Target inference latency is under **10 ms**.
 
