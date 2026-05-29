@@ -115,21 +115,36 @@ def ensure_stations_present(conn, stations: list[dict]):
     conn.commit()
 
 
-def ensure_carpark_exists(conn, carpark_id: str, total_lots: int):
+def ensure_carparks_exist(conn, records: list[dict]):
+    """Batch upsert any carparks not yet in the static table."""
+    unique_ids = set(r["carpark_id"] for r in records)
     with conn.cursor() as cur:
         cur.execute(
-            """
-            INSERT INTO carparks (carpark_id, address, car_lots, svy21_x, svy21_y, lat, lng)
-            VALUES (%s, %s, %s, 0, 0, 0, 0)
-            ON CONFLICT (carpark_id) DO UPDATE
-            SET car_lots = GREATEST(carparks.car_lots, EXCLUDED.car_lots)
-            """,
-            (carpark_id, f"Carpark {carpark_id}", total_lots),
+            "SELECT carpark_id FROM carparks WHERE carpark_id = ANY(%s)",
+            (list(unique_ids),),
         )
+        existing = {row[0] for row in cur.fetchall()}
+
+    missing = unique_ids - existing
+    if not missing:
+        return
+
+    with conn.cursor() as cur:
+        sql = """
+            INSERT INTO carparks (carpark_id, address, car_lots, svy21_x, svy21_y, lat, lng)
+            VALUES %s
+            ON CONFLICT (carpark_id) DO NOTHING
+        """
+        vals = [(cp, f"Carpark {cp}", 0, 0, 0, 0, 0) for cp in missing]
+        psycopg2.extras.execute_values(cur, sql, vals)
     conn.commit()
+    log.info("Auto-registered %d new carparks", len(missing))
 
 
 def load_carpark_availability(conn, records: list[dict]):
+    # Batch-register new carparks first
+    ensure_carparks_exist(conn, records)
+
     with conn.cursor() as cur:
         sql = """
             INSERT INTO availability_logs
@@ -155,7 +170,6 @@ def load_carpark_availability(conn, records: list[dict]):
                 dow >= 5,
                 False,
             ))
-            ensure_carpark_exists(conn, r["carpark_id"], r["total_lots"])
 
         psycopg2.extras.execute_values(cur, sql, values)
     conn.commit()
