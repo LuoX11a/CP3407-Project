@@ -1,0 +1,29 @@
+name: ETL Pipeline
+
+on:
+  schedule:
+    # Runs every 30 minutes (at :05 and :35 past the hour, to avoid API congestion at :00/:30)
+    - cron: "5,35 * * * *"
+  workflow_dispatch:  # allow manual trigger
+
+jobs:
+  etl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install psycopg2-binary requests pandas pyproj
+
+      - name: Run ETL cycle
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python etl_cloud.py
