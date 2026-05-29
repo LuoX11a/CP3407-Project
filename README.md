@@ -47,13 +47,13 @@ An intelligent, real-time parking recommendation system for Singapore's HDB carp
 
 | Layer | Technology | Status |
 |-------|-----------|--------|
-| **Frontend** | React 19, Vite, Leaflet.js (OneMap SG), Chart.js | 待开发 |
-| **Backend** | Python 3.13, FastAPI, Uvicorn | 待开发 |
+| **Frontend** | React 19, Vite, Leaflet.js (OneMap SG), Chart.js | To Do |
+| **Backend** | Python 3.13, FastAPI, Uvicorn | To Do |
 | **Database** | PostgreSQL 17 (Neon cloud), haversine-based kNN | Done |
-| **ETL Pipeline** | Python, Pandas, GitHub Actions (30-min schedule) | 待开发 |
-| **ML Engine** | LightGBM (training ready, awaiting data accumulation) | 待开发 |
-| **Inference** | DeepSeek LLM API (temporary fallback until ML model trained) | 待开发 |
-| **Map Service** | OneMap API (Singapore Official Map tiles) | 待开发 |
+| **ETL Pipeline** | Python, Pandas, GitHub Actions (30-min schedule) | To Do |
+| **ML Engine** | LightGBM (training ready, awaiting data accumulation) | To Do |
+| **Inference** | DeepSeek LLM API (temporary fallback until ML model trained) | To Do |
+| **Map Service** | OneMap API (Singapore Official Map tiles) | To Do |
 
 ## Project Structure
 
