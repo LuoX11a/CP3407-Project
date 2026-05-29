@@ -28,16 +28,10 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# Default database URL — override with env var or CLI
-DEFAULT_DB_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://neondb_owner:npg_yUEZOnYd93gw@ep-crimson-bread-ao6pswy8.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
-)
-
-
 def parse_args():
     p = argparse.ArgumentParser(description="Train ParkGuideSG parking predictor")
-    p.add_argument("--db-url", default=DEFAULT_DB_URL, help="PostgreSQL connection string")
+    p.add_argument("--db-url", default=os.getenv("DATABASE_URL"),
+                   help="PostgreSQL connection string (or set DATABASE_URL env var)")
     p.add_argument("--months", type=int, default=3, help="Training data window in months")
     p.add_argument("--carpark-limit", type=int, default=None,
                    help="Limit carparks for fast experiments")
