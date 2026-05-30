@@ -1,0 +1,161 @@
+name: Data Quality Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install psycopg2-binary pandas
+
+      - name: Run diagnostics
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python3 << 'PYEOF'
+          import os, psycopg2, psycopg2.extras
+
+          conn = psycopg2.connect(os.environ["DATABASE_URL"])
+          cur = conn.cursor()
+
+          print("=" * 60)
+          print("DATA QUALITY REPORT FOR ML TRAINING")
+          print("=" * 60)
+
+          # 1. availability_logs overview
+          cur.execute("SELECT COUNT(*) FROM availability_logs")
+          total = cur.fetchone()[0]
+          cur.execute("SELECT MIN(timestamp), MAX(timestamp) FROM availability_logs")
+          ts_min, ts_max = cur.fetchone()
+          print(f"\n[availability_logs]")
+          print(f"  Total rows: {total:,}")
+          print(f"  Time range: {ts_min} ~ {ts_max}")
+
+          # 2. Weather condition coverage
+          cur.execute("""
+              SELECT 
+                  COUNT(*) as total,
+                  SUM(CASE WHEN weather_condition IS NULL THEN 1 ELSE 0 END) as nulls,
+                  SUM(CASE WHEN weather_condition IS NOT NULL THEN 1 ELSE 0 END) as filled
+              FROM availability_logs
+          """)
+          total_al, nulls, filled = cur.fetchone()
+          print(f"\n[weather_condition coverage]")
+          print(f"  Filled: {filled:,} ({100*filled/total:.1f}%)")
+          print(f"  NULL:   {nulls:,} ({100*nulls/total:.1f}%)")
+
+          # 3. Weather condition distribution
+          cur.execute("""
+              SELECT weather_condition, COUNT(*) as cnt
+              FROM availability_logs
+              WHERE weather_condition IS NOT NULL
+              GROUP BY weather_condition
+              ORDER BY cnt DESC
+          """)
+          print(f"\n[weather_condition values]")
+          for row in cur.fetchall():
+              print(f"  {row[0]}: {row[1]:,}")
+
+          # 4. Carpak stats
+          cur.execute("SELECT COUNT(*) FROM carparks WHERE lat != 0")
+          valid_cp = cur.fetchone()[0]
+          cur.execute("SELECT COUNT(*) FROM carparks")
+          total_cp = cur.fetchone()[0]
+          cur.execute("""
+              SELECT COUNT(DISTINCT carpark_id) 
+              FROM availability_logs a 
+              JOIN carparks c ON a.carpark_id = c.carpark_id 
+              WHERE c.lat != 0
+          """)
+          cp_with_data = cur.fetchone()[0]
+          print(f"\n[carparks]")
+          print(f"  Total registered: {total_cp}")
+          print(f"  With coordinates (lat!=0): {valid_cp}")
+          print(f"  With availability data: {cp_with_data}")
+
+          # 5. Time coverage (days)
+          cur.execute("""
+              SELECT COUNT(DISTINCT timestamp::date) 
+              FROM availability_logs
+          """)
+          days = cur.fetchone()[0]
+          print(f"\n[time coverage]")
+          print(f"  Distinct days: {days}")
+          print(f"  Hours per carpark (avg): {total/(cp_with_data*days) if cp_with_data*days > 0 else 0:.1f}")
+
+          # 6. Public holiday flag
+          cur.execute("""
+              SELECT 
+                  SUM(CASE WHEN is_public_holiday THEN 1 ELSE 0 END) as holidays,
+                  COUNT(*) as total
+              FROM availability_logs
+          """)
+          holiday_count, al_total = cur.fetchone()
+          cur.execute("SELECT COUNT(*) FROM public_holidays")
+          ph_total = cur.fetchone()[0]
+          print(f"\n[public holidays]")
+          print(f"  Holiday rows: {holiday_count:,} ({100*holiday_count/al_total:.1f}%)")
+          print(f"  Holidays in DB: {ph_total}")
+
+          # 7. Weekend coverage
+          cur.execute("""
+              SELECT 
+                  SUM(CASE WHEN is_weekend THEN 1 ELSE 0 END) as weekends,
+                  COUNT(*) as total
+              FROM availability_logs
+          """)
+          wknd_count, al_total2 = cur.fetchone()
+          print(f"\n[weekend coverage]")
+          print(f"  Weekend rows: {wknd_count:,} ({100*wknd_count/al_total2:.1f}%)")
+
+          # 8. weather_records freshness
+          cur.execute("""
+              SELECT COUNT(*), MIN(timestamp), MAX(timestamp)
+              FROM weather_records
+          """)
+          wr_count, wr_min, wr_max = cur.fetchone()
+          cur.execute("""
+              SELECT COUNT(DISTINCT station_id) FROM weather_records
+          """)
+          wr_stations = cur.fetchone()[0]
+          print(f"\n[weather_records]")
+          print(f"  Total rows: {wr_count:,}")
+          print(f"  Stations: {wr_stations}")
+          print(f"  Range: {wr_min} ~ {wr_max}")
+
+          # 9. ML training readiness verdict
+          print(f"\n{'='*60}")
+          print("TRAINING READINESS VERDICT")
+          print(f"{'='*60}")
+          issues = []
+          if total < 5000:
+              issues.append(f"Only {total} rows — need more data (min ~5000 for LightGBM)")
+          if nulls > 0:
+              issues.append(f"{nulls} rows have NULL weather_condition")
+          if cp_with_data < 10:
+              issues.append(f"Only {cp_with_data} carparks with data — sparse spatial coverage")
+          if days < 7:
+              issues.append(f"Only {days} days of data — can't capture weekly seasonality")
+          if wr_count == 0:
+              issues.append("No weather records at all")
+          
+          if issues:
+              print("ISSUES FOUND:")
+              for i in issues:
+                  print(f"  - {i}")
+          else:
+              print("Data looks healthy for training!")
+
+          conn.close()
+          PYEOF
