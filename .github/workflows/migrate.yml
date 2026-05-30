@@ -1,0 +1,21 @@
+name: Run DB Migration
+
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install psql
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Run migration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: psql "$DATABASE_URL" -f 03_alter_weather_condition.sql
