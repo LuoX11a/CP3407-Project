@@ -49,14 +49,8 @@ CREATE TABLE weather_records (
     temperature       NUMERIC(4,1),
     humidity          NUMERIC(4,1),
     rainfall          NUMERIC(6,2),
-    weather_condition VARCHAR(20),  -- light rain | heavy rain | clear | overcast
+    weather_condition VARCHAR(50),  -- light rain | heavy rain | clear | overcast
 
-    CONSTRAINT chk_weather_condition CHECK (
-        weather_condition IN ('light rain', 'moderate rain', 'heavy rain', 'showers',
-                              'thundery showers', 'clear', 'fair', 'fair and warm',
-                              'cloudy', 'partly cloudy', 'overcast', 'windy', 'hazy')
-    )
-);
 
 CREATE INDEX idx_weather_records_station_ts
     ON weather_records (station_id, timestamp DESC);
@@ -86,7 +80,7 @@ CREATE TABLE availability_logs (
     timestamp           TIMESTAMPTZ NOT NULL,
     available_lots      INTEGER NOT NULL,
     vacancy_rate        NUMERIC(4,3) NOT NULL,
-    weather_condition   VARCHAR(20),
+    weather_condition   VARCHAR(50),
 
     -- Derived temporal features for ML training
     hour                SMALLINT NOT NULL CHECK (hour BETWEEN 0 AND 23),
