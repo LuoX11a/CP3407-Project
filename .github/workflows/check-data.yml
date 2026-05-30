@@ -73,7 +73,7 @@ jobs:
           cur.execute("SELECT COUNT(*) FROM carparks")
           total_cp = cur.fetchone()[0]
           cur.execute("""
-              SELECT COUNT(DISTINCT carpark_id) 
+              SELECT COUNT(DISTINCT a.carpark_id) 
               FROM availability_logs a 
               JOIN carparks c ON a.carpark_id = c.carpark_id 
               WHERE c.lat != 0
