@@ -52,6 +52,7 @@ def main():
         VALUES %s
         ON CONFLICT (carpark_id) DO UPDATE
         SET address = EXCLUDED.address,
+            car_lots = GREATEST(carparks.car_lots, EXCLUDED.car_lots),
             svy21_x = EXCLUDED.svy21_x,
             svy21_y = EXCLUDED.svy21_y,
             lat      = EXCLUDED.lat,
@@ -79,7 +80,7 @@ def main():
             skipped += 1
             continue
 
-        car_lots = 0  # the static dataset doesn't have lot counts; API provides them
+        car_lots = int(r.get("car_park_bays", 0) or 0)
 
         lng, lat = svy21_to_wgs84.transform(x, y)
 
