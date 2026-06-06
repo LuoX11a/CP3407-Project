@@ -49,8 +49,17 @@ CREATE TABLE weather_records (
     temperature       NUMERIC(4,1),
     humidity          NUMERIC(4,1),
     rainfall          NUMERIC(6,2),
-    weather_condition VARCHAR(50),  -- light rain | heavy rain | clear | overcast
+    weather_condition VARCHAR(50),  -- NEA forecast values e.g. "partly cloudy (day)"
 
+    CONSTRAINT chk_weather_condition CHECK (
+        weather_condition IN ('light rain', 'moderate rain', 'heavy rain', 'showers',
+                              'thundery showers', 'clear', 'fair', 'fair and warm',
+                              'cloudy', 'partly cloudy', 'overcast', 'windy', 'hazy',
+                              'fair (day)', 'fair (night)', 'fair and warm (day)', 'fair and warm (night)',
+                              'partly cloudy (day)', 'partly cloudy (night)',
+                              'windy (day)', 'windy (night)')
+    )
+);
 
 CREATE INDEX idx_weather_records_station_ts
     ON weather_records (station_id, timestamp DESC);
