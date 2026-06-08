@@ -3,6 +3,16 @@
 import os
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+# Load .env from project root
+try:
+    from dotenv import load_dotenv
+    _env_path = Path(__file__).resolve().parents[3] / ".env"
+    if _env_path.exists():
+        load_dotenv(_env_path)
+except ImportError:
+    pass
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
