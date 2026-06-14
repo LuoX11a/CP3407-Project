@@ -1,11 +1,34 @@
-"""GET /api/v1/carpark/{id} — Single carpark detail and history."""
+"""Carpark detail, history, and address search endpoints."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
-from app.models.schemas import CarparkDetail, CarparkHistoryResponse, HistoryPoint
-from app.services.geospatial import query_carpark_detail, query_carpark_history
+from app.models.schemas import (
+    CarparkDetail, CarparkHistoryResponse, HistoryPoint,
+    SearchResponse, SearchResult,
+)
+from app.services.geospatial import query_carpark_detail, query_carpark_history, search_carparks_by_address
 
 router = APIRouter()
+
+
+@router.get("/carpark/search", response_model=SearchResponse)
+def carpark_search(
+    q: str = Query(..., min_length=1, max_length=200, description="Address or area search query"),
+    limit: int = Query(default=20, ge=1, le=50),
+):
+    rows = search_carparks_by_address(q, limit)
+    return SearchResponse(results=[
+        SearchResult(
+            carpark_id=r["carpark_id"],
+            address=r["address"],
+            car_lots=r["car_lots"],
+            lat=r["lat"],
+            lng=r["lng"],
+            available_lots=r.get("available_lots"),
+            vacancy_rate=float(r["vacancy_rate"]) if r.get("vacancy_rate") is not None else None,
+        )
+        for r in rows
+    ])
 
 
 @router.get("/carpark/{carpark_id}", response_model=CarparkHistoryResponse)

@@ -17,7 +17,7 @@ except ImportError:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import recommend, carpark, health
+from app.routers import recommend, carpark, health, auth, favourites
 from app.services.inference import load_model, is_model_loaded
 
 logging.basicConfig(
@@ -29,8 +29,22 @@ log = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: load ML model. Shutdown: clean up."""
+    """Startup: run migrations, load ML model. Shutdown: clean up."""
     log.info("Starting ParkGuideSG API server...")
+
+    # Auto-run pending SQL migrations
+    _migrations_dir = Path(__file__).resolve().parents[2]
+    for _sql_file in sorted(_migrations_dir.glob("*.sql")):
+        try:
+            import psycopg2
+            _conn = psycopg2.connect(os.getenv("DATABASE_URL", ""))
+            _cur = _conn.cursor()
+            _cur.execute(_sql_file.read_text(encoding="utf-8"))
+            _conn.commit()
+            _conn.close()
+            log.info("Migration applied: %s", _sql_file.name)
+        except Exception as _e:
+            log.info("Migration %s skipped: %s", _sql_file.name, _e)
 
     model_path = os.getenv("MODEL_PATH", "ml/model/carpark_predictor.joblib")
     if os.path.exists(model_path):
@@ -67,6 +81,8 @@ app.add_middleware(
 app.include_router(recommend.router, prefix="/api/v1", tags=["Recommendations"])
 app.include_router(carpark.router, prefix="/api/v1", tags=["Carpark"])
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
+app.include_router(auth.router, prefix="/api/v1", tags=["Auth"])
+app.include_router(favourites.router, prefix="/api/v1", tags=["Favourites"])
 
 
 # Root redirect to docs
