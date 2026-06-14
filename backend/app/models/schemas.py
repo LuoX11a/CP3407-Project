@@ -1,5 +1,6 @@
 """Pydantic schemas for API requests and responses."""
 
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 
@@ -74,3 +75,55 @@ class HealthResponse(BaseModel):
     model_loaded: bool
     carpark_count: int
     latest_data_ts: str | None
+
+
+# ── Auth ──────────────────────────────────────────────────
+
+class RegisterRequest(BaseModel):
+    username: str = Field(..., min_length=2, max_length=50)
+    email: str = Field(..., max_length=255)
+    password: str = Field(..., min_length=6, max_length=128)
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    user_id: int
+    username: str
+    token: str
+
+
+# ── Favourites ────────────────────────────────────────────
+
+class FavouriteItem(BaseModel):
+    carpark_id: str
+    address: str
+    car_lots: int
+    lat: float
+    lng: float
+    available_lots: int
+    vacancy_rate: float
+    weather_condition: str | None
+
+
+class FavouriteListResponse(BaseModel):
+    favourites: list[FavouriteItem]
+
+
+# ── Search ────────────────────────────────────────────────
+
+class SearchResult(BaseModel):
+    carpark_id: str
+    address: str
+    car_lots: int
+    lat: float
+    lng: float
+    available_lots: int | None
+    vacancy_rate: float | None
+
+
+class SearchResponse(BaseModel):
+    results: list[SearchResult]
