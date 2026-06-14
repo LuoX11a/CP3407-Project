@@ -17,7 +17,7 @@ function statusBadge(status) {
   return <span className={`badge ${cls}`}>{status}</span>;
 }
 
-export default function CarparkCard({ carpark, selected, onClick }) {
+export default function CarparkCard({ carpark, selected, onClick, favourited, onToggleFavourite, showFavourite }) {
   const trendLabels = useMemo(
     () => carpark.trend?.map((p) => p.hour) ?? [],
     [carpark.trend],
@@ -58,7 +58,21 @@ export default function CarparkCard({ carpark, selected, onClick }) {
       onClick={onClick}
     >
       <div className="card-header">
-        <span className="name">{carpark.carpark_id}</span>
+        <span className="name">
+          {showFavourite && (
+            <span
+              className={`star-btn ${favourited ? "favourited" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavourite && onToggleFavourite(carpark);
+              }}
+              title={favourited ? "Remove from favourites" : "Add to favourites"}
+            >
+              {favourited ? "★" : "☆"}
+            </span>
+          )}
+          {carpark.carpark_id}
+        </span>
         <span className="distance">{carpark.distance_m}m</span>
       </div>
       <div className="card-stats">
