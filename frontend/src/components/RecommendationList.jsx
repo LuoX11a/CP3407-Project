@@ -1,4 +1,11 @@
+import { useState, useMemo } from "react";
 import CarparkCard from "./CarparkCard";
+
+const SORT_OPTIONS = [
+  { key: "distance", label: "Distance" },
+  { key: "available", label: "Available Lots" },
+  { key: "vacancy", label: "Vacancy Rate" },
+];
 
 export default function RecommendationList({
   results,
@@ -7,10 +14,47 @@ export default function RecommendationList({
   onRetry,
   selectedId,
   onSelect,
+  favourites,
+  onToggleFavourite,
+  isLoggedIn,
 }) {
+  const [sortBy, setSortBy] = useState("distance");
+
+  const sorted = useMemo(() => {
+    const list = [...results];
+    switch (sortBy) {
+      case "available":
+        list.sort((a, b) => (b.available_lots || 0) - (a.available_lots || 0));
+        break;
+      case "vacancy":
+        list.sort((a, b) => (b.predicted_vacancy_rate || 0) - (a.predicted_vacancy_rate || 0));
+        break;
+      default:
+        list.sort((a, b) => (a.distance_m || 0) - (b.distance_m || 0));
+    }
+    return list;
+  }, [results, sortBy]);
+
+  const favIds = useMemo(() => new Set((favourites || []).map((f) => f.carpark_id)), [favourites]);
+
   return (
     <div className="sidebar-section">
-      <h2>Recommendations</h2>
+      <div className="section-header">
+        <h2>Recommendations</h2>
+        {results.length > 0 && (
+          <select
+            className="sort-select"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.key} value={opt.key}>
+                Sort by {opt.label}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {loading && (
         <div className="loading">
@@ -27,17 +71,18 @@ export default function RecommendationList({
       )}
 
       {!loading && !error && results.length === 0 && (
-        <div className="loading">
-          Waiting for location data...
-        </div>
+        <div className="loading">Waiting for location data...</div>
       )}
 
-      {results.map((cp) => (
+      {sorted.map((cp) => (
         <CarparkCard
           key={cp.carpark_id}
           carpark={cp}
           selected={selectedId === cp.carpark_id}
           onClick={() => onSelect(cp)}
+          favourited={favIds.has(cp.carpark_id)}
+          onToggleFavourite={onToggleFavourite}
+          showFavourite={isLoggedIn}
         />
       ))}
     </div>
