@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.joblib
+.env
+*.egg-info/
+.venv/
+venv/
+node_modules/
+.git/
+.github/
+*.docx
+frontend/node_modules/
+ml/model/

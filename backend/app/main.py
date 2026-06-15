@@ -16,6 +16,7 @@ except ImportError:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.routers import recommend, carpark, health, auth, favourites
 from app.services.inference import load_model, is_model_loaded
@@ -85,12 +86,7 @@ app.include_router(auth.router, prefix="/api/v1", tags=["Auth"])
 app.include_router(favourites.router, prefix="/api/v1", tags=["Favourites"])
 
 
-# Root redirect to docs
-@app.get("/")
-def root():
-    return {
-        "app": "ParkGuideSG API",
-        "version": "0.1.0",
-        "docs": "/docs",
-        "health": "/api/v1/health",
-    }
+# Serve frontend static files (production)
+_frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+if _frontend_dist.is_dir():
+    app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
