@@ -68,7 +68,7 @@ export default function App() {
     setLoading(true);
     setApiError(null);
     try {
-      const data = await fetchRecommendations(userLocation[0], userLocation[1], 5, 1000);
+      const data = await fetchRecommendations(userLocation[0], userLocation[1], 5, 3000);
       setResults(data.results || []);
       if (data.results?.length > 0 && !selectedId) {
         setSelectedId(data.results[0].carpark_id);
