@@ -4,7 +4,7 @@ __pycache__/
 *.joblib
 .env
 *.egg-info/
-dist/
+/dist/
 .venv/
 venv/
 node_modules/
