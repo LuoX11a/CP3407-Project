@@ -35,10 +35,16 @@ async def lifespan(app: FastAPI):
 
     # Auto-run pending SQL migrations
     _migrations_dir = Path(__file__).resolve().parents[2]
+    _db_url = os.getenv("DATABASE_URL", "")
+    # Strip channel_binding param not supported by all libpq versions
+    if "channel_binding=" in _db_url:
+        import re
+        _db_url = re.sub(r"[&?]channel_binding=[^&]*", "", _db_url)
+
     for _sql_file in sorted(_migrations_dir.glob("*.sql")):
         try:
             import psycopg2
-            _conn = psycopg2.connect(os.getenv("DATABASE_URL", ""))
+            _conn = psycopg2.connect(_db_url)
             _cur = _conn.cursor()
             _cur.execute(_sql_file.read_text(encoding="utf-8"))
             _conn.commit()
@@ -48,14 +54,16 @@ async def lifespan(app: FastAPI):
             log.info("Migration %s skipped: %s", _sql_file.name, _e)
 
     model_path = os.getenv("MODEL_PATH", "ml/model/carpark_predictor.joblib")
-    if os.path.exists(model_path):
-        load_model(model_path)
-    else:
-        log.warning(
-            "Model not found at %s — recommendations will use heuristic fallback. "
-            "Train a model with 'python ml/train.py --months 3' once enough data is collected.",
-            model_path,
-        )
+    try:
+        if os.path.exists(model_path):
+            load_model(model_path)
+        else:
+            log.warning(
+                "Model not found at %s — recommendations will use heuristic fallback.",
+                model_path,
+            )
+    except Exception as _e:
+        log.warning("Model load failed: %s", _e)
 
     log.info("API ready. Model loaded: %s", is_model_loaded())
     yield
