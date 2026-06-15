@@ -13,7 +13,5 @@ services:
         value: https://api.deepseek.com/v1
       - key: LLM_MODEL
         value: deepseek-chat
-      - key: MODEL_PATH
-        value: ml/model/carpark_predictor.joblib
       - key: PYTHONUNBUFFERED
         value: "1"
