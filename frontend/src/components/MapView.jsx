@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 
 const SINGAPORE_CENTER = [1.3521, 103.8198];
 
@@ -127,5 +126,5 @@ export default function MapView({ results, userLocation, selectedId, onSelect })
     });
   }, [results, selectedId, onSelect]);
 
-  return <div ref={mapRef} />;
+  return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;
 }
