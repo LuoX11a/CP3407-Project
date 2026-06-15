@@ -59,8 +59,8 @@ export default function MapView({ results, userLocation, selectedId, onSelect })
       zoomControl: true,
     });
 
-    L.tileLayer("https://www.onemap.gov.sg/maps/tiles/Default/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.onemap.gov.sg">OneMap</a> | Data.gov.sg',
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | Data.gov.sg',
       maxZoom: 19,
     }).addTo(map);
 
@@ -126,5 +126,5 @@ export default function MapView({ results, userLocation, selectedId, onSelect })
     });
   }, [results, selectedId, onSelect]);
 
-  return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;
+  return <div ref={mapRef} className="map-container" />;
 }
