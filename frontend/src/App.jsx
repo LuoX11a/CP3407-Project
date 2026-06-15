@@ -6,6 +6,7 @@ import { fetchRecommendations, searchCarparks, fetchFavourites, addFavourite, re
 
 export default function App() {
   const [userLocation, setUserLocation] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(true);
   const [locationError, setLocationError] = useState(null);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -40,10 +41,12 @@ export default function App() {
       (pos) => {
         setUserLocation([pos.coords.latitude, pos.coords.longitude]);
         setLocationError(null);
+        setLocationLoading(false);
       },
-      () => {
+      (err) => {
         setLocationError("Location access denied. Using default Singapore location.");
         setUserLocation([1.3521, 103.8198]);
+        setLocationLoading(false);
       },
       { enableHighAccuracy: true, maximumAge: 60000, timeout: 10000 },
     );
@@ -169,9 +172,11 @@ export default function App() {
 
         <div className="header-right">
           <div className="gps-info">
-            {userLocation
-              ? `GPS: ${userLocation[0].toFixed(4)}, ${userLocation[1].toFixed(4)}`
-              : locationError || "Acquiring location..."}
+            {locationLoading && !userLocation
+              ? "Acquiring GPS location..."
+              : userLocation
+                ? `GPS: ${userLocation[0].toFixed(4)}, ${userLocation[1].toFixed(4)}`
+                : locationError || "Location unavailable"}
           </div>
           {isLoggedIn ? (
             <div className="user-info">
@@ -259,6 +264,7 @@ export default function App() {
             favourites={favourites}
             onToggleFavourite={handleToggleFavourite}
             isLoggedIn={isLoggedIn}
+            locationLoading={locationLoading}
           />
         </div>
       </div>

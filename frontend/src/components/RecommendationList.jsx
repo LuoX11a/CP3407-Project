@@ -17,6 +17,7 @@ export default function RecommendationList({
   favourites,
   onToggleFavourite,
   isLoggedIn,
+  locationLoading,
 }) {
   const [sortBy, setSortBy] = useState("distance");
 
@@ -71,7 +72,11 @@ export default function RecommendationList({
       )}
 
       {!loading && !error && results.length === 0 && (
-        <div className="loading">No carparks found nearby. Try expanding your search radius.</div>
+        <div className="loading">
+          {locationLoading
+            ? "Waiting for GPS location..."
+            : "No carparks found nearby. Try expanding your search radius."}
+        </div>
       )}
 
       {sorted.map((cp) => (
