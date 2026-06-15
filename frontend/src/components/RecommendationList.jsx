@@ -71,7 +71,7 @@ export default function RecommendationList({
       )}
 
       {!loading && !error && results.length === 0 && (
-        <div className="loading">Waiting for location data...</div>
+        <div className="loading">No carparks found nearby. Try expanding your search radius.</div>
       )}
 
       {sorted.map((cp) => (
