@@ -9,7 +9,11 @@ from app.models.schemas import RegisterRequest, LoginRequest, AuthResponse
 from app.services.auth import hash_password, verify_password, create_token
 
 router = APIRouter()
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+_raw_db_url = os.getenv("DATABASE_URL", "")
+if "channel_binding=" in _raw_db_url:
+    import re
+    _raw_db_url = re.sub(r"[&?]channel_binding=[^&]*", "", _raw_db_url)
+DATABASE_URL = _raw_db_url
 
 
 @router.post("/auth/register", response_model=AuthResponse)

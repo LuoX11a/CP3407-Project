@@ -5,7 +5,11 @@ import time
 import psycopg2
 import psycopg2.extras
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+_raw_db_url = os.getenv("DATABASE_URL", "")
+if "channel_binding=" in _raw_db_url:
+    import re
+    _raw_db_url = re.sub(r"[&?]channel_binding=[^&]*", "", _raw_db_url)
+DATABASE_URL = _raw_db_url
 
 # Number of carparks to pre-fetch for in-memory kNN (balance speed vs accuracy)
 PRE_FETCH_RADIUS_M = 5000
