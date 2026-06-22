@@ -48,4 +48,11 @@ Before heading to Orchard Road on Saturday, Siti types "Orchard" into the search
 | 4 | [Search by Area or Address](user-stories/iteration-1/04-search-address.md) | 20 | 1 | Done |
 | 7 | [Sort Carparks](user-stories/iteration-1/07-sort.md) | 20 | 1 | Done |
 
-**Iteration 1 Velocity**: 17 story-point-days completed / 10 max planned = **0.85 actual velocity** (planned: 0.5)
+**Iteration 1 Velocity**:
+
+- Team members: **3**
+- Working days: **20**
+- Completed work: **17 days**
+- Total team capacity: 3 × 20 = **60 person-days**
+- Actual velocity factor: 17 ÷ 60 = **0.28 (28%)**
+- Planned velocity factor: **0.5 (50%)**
