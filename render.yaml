@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: parkguidesg
+    env: docker
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        value: https://api.deepseek.com/v1
+      - key: LLM_MODEL
+        value: deepseek-chat
+      - key: PYTHONUNBUFFERED
+        value: "1"
