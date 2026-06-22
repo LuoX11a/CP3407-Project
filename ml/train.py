@@ -20,7 +20,10 @@ import lightgbm as lgb
 
 # Allow importing features.py from the same directory
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from features import load_training_data, split_xy, CATEGORICAL_COLS
+from features import (
+    load_training_data, split_xy, CATEGORICAL_COLS,
+    identify_non_eps_carparks, build_proxy_map,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,8 +50,23 @@ def parse_args():
 
 def main():
     args = parse_args()
+
+    # 1. Identify non-EPS carparks (always-zero availability)
+    log.info("Identifying non-EPS carparks (always-zero availability)...")
+    non_eps_ids = identify_non_eps_carparks(args.db_url)
+    log.info("Found %d non-EPS carparks: %s", len(non_eps_ids), non_eps_ids[:10])
+
+    # 2. Build k-NN spatial proxy map for non-EPS carparks
+    log.info("Building k-NN spatial proxy map...")
+    proxy_map = build_proxy_map(args.db_url, non_eps_ids)
+    log.info("Proxy map built for %d carparks", len(proxy_map))
+
+    # 3. Load training data, excluding non-EPS carparks
     log.info("Loading training data (months=%d)...", args.months)
-    df = load_training_data(args.db_url, months=args.months, carpark_limit=args.carpark_limit)
+    df = load_training_data(
+        args.db_url, months=args.months, carpark_limit=args.carpark_limit,
+        exclude_ids=non_eps_ids,
+    )
     X, y = split_xy(df)
 
     log.info("Training set: %d rows, %d features", len(X), X.shape[1])
@@ -117,6 +135,8 @@ def main():
         "training_rows": len(X),
         "training_months": args.months,
         "trained_at": datetime.now().isoformat(),
+        "non_eps_ids": non_eps_ids,
+        "proxy_map": proxy_map,
     }
     joblib.dump(artifact, args.output)
     log.info("Model saved to %s", args.output)
