@@ -45,10 +45,6 @@ def parse_args():
     p.add_argument("--num-leaves", type=int, default=64, help="Max leaves per tree")
     p.add_argument("--lr", type=float, default=0.05, help="Learning rate")
     p.add_argument("--early-stopping", type=int, default=50, help="Early stopping rounds")
-    p.add_argument("--non-eps-cutoff", type=str, default=None,
-                   help="Date cutoff for non-EPS detection (e.g. '2026-06-07'). "
-                        "Only data before this date is used to identify non-EPS carparks, "
-                        "to exclude synthetic/filled data from the detection.")
     return p.parse_args()
 
 
@@ -57,7 +53,7 @@ def main():
 
     # 1. Identify non-EPS carparks (always-zero availability)
     log.info("Identifying non-EPS carparks (always-zero availability)...")
-    non_eps_ids = identify_non_eps_carparks(args.db_url, before_date=args.non_eps_cutoff)
+    non_eps_ids = identify_non_eps_carparks(args.db_url)
     log.info("Found %d non-EPS carparks: %s", len(non_eps_ids), non_eps_ids[:10])
 
     # 2. Build k-NN spatial proxy map for non-EPS carparks
