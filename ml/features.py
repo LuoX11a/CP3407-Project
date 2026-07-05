@@ -38,33 +38,18 @@ def _haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def identify_non_eps_carparks(db_url: str, before_date: str | None = None) -> list[str]:
-    """Return carpark_ids that have always-zero available_lots (non-EPS carparks).
-
-    Parameters
-    ----------
-    db_url : str
-        PostgreSQL connection string.
-    before_date : str or None
-        Only consider data before this date (e.g. '2026-06-07') to exclude
-        synthetic/filled data. If None, uses all data.
-    """
+def identify_non_eps_carparks(db_url: str) -> list[str]:
+    """Return carpark_ids that have always-zero available_lots (non-EPS carparks)."""
     engine = create_engine(db_url)
-    date_filter = ""
-    params = {}
-    if before_date:
-        date_filter = "AND a.timestamp < %(before_date)s"
-        params["before_date"] = before_date
-    query = f"""
+    query = """
         SELECT c.carpark_id
         FROM availability_logs a
         JOIN carparks c ON a.carpark_id = c.carpark_id
         WHERE c.lat != 0
-          {date_filter}
         GROUP BY c.carpark_id
         HAVING MAX(a.available_lots) = 0
     """
-    df = pd.read_sql_query(query, engine, params=params)
+    df = pd.read_sql_query(query, engine)
     engine.dispose()
     return df["carpark_id"].tolist()
 
