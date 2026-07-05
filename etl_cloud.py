@@ -7,8 +7,10 @@ Requirements: pip install psycopg2-binary requests pandas pyproj
 """
 
 import os
+import time
 import logging
 from datetime import datetime
+from functools import wraps
 
 import pandas as pd
 import psycopg2
@@ -27,6 +29,10 @@ NEA_TEMP_URL = "https://api.data.gov.sg/v1/environment/air-temperature"
 NEA_HUMID_URL = "https://api.data.gov.sg/v1/environment/relative-humidity"
 NEA_RAIN_URL = "https://api.data.gov.sg/v1/environment/rainfall"
 
+# Retry config
+MAX_RETRIES = 3
+RETRY_BACKOFF = 2  # seconds, exponential
+
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL environment variable is required")
 
@@ -40,13 +46,45 @@ svy21_to_wgs84 = Transformer.from_crs("EPSG:3414", "EPSG:4326", always_xy=True)
 
 
 # ---------------------------------------------------------------------------
+# Retry helper
+# ---------------------------------------------------------------------------
+
+def with_retry(fn, max_retries=MAX_RETRIES, backoff=RETRY_BACKOFF):
+    """Decorator: retry on HTTP or connection errors with exponential backoff."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        last_exc = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                return fn(*args, **kwargs)
+            except (requests.RequestException, Exception) as e:
+                last_exc = e
+                if attempt < max_retries:
+                    wait = backoff ** attempt
+                    log.warning(
+                        "%s failed (attempt %d/%d), retrying in %ds: %s",
+                        fn.__name__, attempt, max_retries, wait, e,
+                    )
+                    time.sleep(wait)
+        log.error("%s failed after %d attempts: %s", fn.__name__, max_retries, last_exc)
+        raise last_exc
+    return wrapper
+
+
+# ---------------------------------------------------------------------------
 # Data fetchers
 # ---------------------------------------------------------------------------
 
-def fetch_carpark_availability() -> list[dict]:
-    resp = requests.get(HDB_API_URL, timeout=30)
+def _fetch_json(url, timeout=30):
+    """Fetch JSON from URL with retry."""
+    resp = requests.get(url, timeout=timeout)
     resp.raise_for_status()
-    data = resp.json()
+    return resp.json()
+
+
+def fetch_carpark_availability() -> list[dict]:
+    """Fetch live HDB carpark lot counts. Retries on failure."""
+    data = with_retry(lambda: _fetch_json(HDB_API_URL))()
 
     records = []
     ts_str = data["items"][0]["timestamp"]
@@ -70,9 +108,8 @@ def fetch_carpark_availability() -> list[dict]:
 
 
 def fetch_weather() -> tuple[list[dict], list[dict]]:
-    resp = requests.get(NEA_API_URL, timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
+    """Fetch NEA 2-hour weather forecast. Retries on failure."""
+    data = with_retry(lambda: _fetch_json(NEA_API_URL))()
 
     stations = []
     for s in data.get("area_metadata", []):
@@ -113,9 +150,7 @@ def _haversine(lat1, lng1, lat2, lng2):
 
 def _fetch_measurement(url):
     """Fetch a single NEA measurement endpoint. Returns (readings, stations_meta)."""
-    resp = requests.get(url, timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
+    data = with_retry(lambda: _fetch_json(url))()
     stations = {}
     for s in data.get("metadata", {}).get("stations", []):
         loc = s.get("location", {})
@@ -135,9 +170,13 @@ def fetch_weather_measurements(forecast_areas):
     forecast_areas: list of {station_id, name, lat, lng} from fetch_weather()
     Returns: dict[area_name, {temperature, humidity, rainfall}]
     """
-    temp_readings, temp_stations = _fetch_measurement(NEA_TEMP_URL)
-    hum_readings, hum_stations = _fetch_measurement(NEA_HUMID_URL)
-    rain_readings, rain_stations = _fetch_measurement(NEA_RAIN_URL)
+    try:
+        temp_readings, temp_stations = with_retry(_fetch_measurement)(NEA_TEMP_URL)
+        hum_readings, hum_stations = with_retry(_fetch_measurement)(NEA_HUMID_URL)
+        rain_readings, rain_stations = with_retry(_fetch_measurement)(NEA_RAIN_URL)
+    except Exception:
+        log.warning("Weather measurement APIs failed, proceeding without measurements")
+        return {}
 
     result = {}
     for area in forecast_areas:
@@ -146,7 +185,6 @@ def fetch_weather_measurements(forecast_areas):
 
         temp = hum = rain = None
 
-        # Find nearest temperature station
         best_dist = float("inf")
         for sid, val in temp_readings.items():
             sloc = temp_stations.get(sid)
@@ -156,7 +194,6 @@ def fetch_weather_measurements(forecast_areas):
                     best_dist = d
                     temp = val
 
-        # Find nearest humidity station
         best_dist = float("inf")
         for sid, val in hum_readings.items():
             sloc = hum_stations.get(sid)
@@ -166,7 +203,6 @@ def fetch_weather_measurements(forecast_areas):
                     best_dist = d
                     hum = val
 
-        # Find nearest rainfall station
         best_dist = float("inf")
         for sid, val in rain_readings.items():
             sloc = rain_stations.get(sid)
@@ -186,6 +222,8 @@ def fetch_weather_measurements(forecast_areas):
 # ---------------------------------------------------------------------------
 
 def ensure_stations_present(conn, stations: list[dict]):
+    if not stations:
+        return
     with conn.cursor() as cur:
         sql = """
             INSERT INTO weather_stations (station_id, name, lat, lng)
@@ -213,6 +251,9 @@ def ensure_carpark_exists(conn, carpark_id: str, total_lots: int):
 
 
 def load_carpark_availability(conn, records: list[dict]):
+    """Insert availability records. Includes weather condition from the fetch."""
+    if not records:
+        return 0
     with conn.cursor() as cur:
         sql = """
             INSERT INTO availability_logs
@@ -243,9 +284,12 @@ def load_carpark_availability(conn, records: list[dict]):
         psycopg2.extras.execute_values(cur, sql, values)
     conn.commit()
     log.info("Inserted %d availability records", len(values))
+    return len(values)
 
 
 def load_weather_records(conn, records: list[dict], measurements: dict = None):
+    if not records:
+        return 0
     with conn.cursor() as cur:
         sql = """
             INSERT INTO weather_records (station_id, timestamp, weather_condition,
@@ -274,10 +318,11 @@ def load_weather_records(conn, records: list[dict], measurements: dict = None):
         psycopg2.extras.execute_values(cur, sql, values)
     conn.commit()
     log.info("Inserted %d weather records", len(values))
+    return len(values)
 
 
 def update_weather_on_availability(conn):
-    log.info("Updating weather conditions...")
+    """Backfill weather_condition from nearest weather record within +/- 2 hours."""
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -301,24 +346,28 @@ def update_weather_on_availability(conn):
             """
         )
     conn.commit()
-    log.info("Weather update: %d rows affected", cur.rowcount)
+    if cur.rowcount:
+        log.info("Weather backfill: %d rows updated", cur.rowcount)
 
 
 def update_public_holiday_flags(conn):
+    """Mark availability records that fall on a public holiday."""
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE availability_logs a
             SET is_public_holiday = TRUE
             FROM public_holidays h
-            WHERE a.timestamp::date = h.date
+            WHERE DATE(a.timestamp AT TIME ZONE 'Asia/Singapore') = h.date
               AND a.is_public_holiday = FALSE
+              AND a.timestamp >= now() - INTERVAL '7 days'
             """
         )
     conn.commit()
 
 
 def cleanup_old_records(conn):
+    """Remove availability logs older than 90 days."""
     with conn.cursor() as cur:
         cur.execute(
             "DELETE FROM availability_logs WHERE timestamp < now() - INTERVAL '90 days'"
@@ -329,38 +378,98 @@ def cleanup_old_records(conn):
 
 
 # ---------------------------------------------------------------------------
-# Main — single cycle, then exit
+# Main — each step independent, failures in non-critical steps don't abort
 # ---------------------------------------------------------------------------
 
 def main():
     log.info("=== ParkGuideSG Cloud ETL Cycle ===")
+    cycle_start = time.monotonic()
 
     conn = psycopg2.connect(DATABASE_URL)
     log.info("Connected to cloud database")
 
-    # 1. Weather
-    stations, weather_records = fetch_weather()
-    measurements = fetch_weather_measurements(stations)
-    ensure_stations_present(conn, stations)
-    load_weather_records(conn, weather_records, measurements)
-    log.info("Weather: %d stations, %d records", len(stations), len(weather_records))
+    # Track per-step status for summary
+    status = {
+        "weather_forecast": False,
+        "weather_measurements": False,
+        "carpark": False,
+        "weather_backfill": False,
+        "holiday_flags": False,
+        "cleanup": False,
+    }
 
-    # 2. HDB availability
-    carpark_records = fetch_carpark_availability()
-    load_carpark_availability(conn, carpark_records)
-    log.info("Availability: %d records", len(carpark_records))
+    # ── Step 1: Weather (non-critical — failure won't block carpark data) ──
+    try:
+        stations, weather_records = fetch_weather()
+        ensure_stations_present(conn, stations)
+        measurements = fetch_weather_measurements(stations)
+        load_weather_records(conn, weather_records, measurements)
+        log.info("Weather OK: %d stations, %d forecast records",
+                 len(stations), len(weather_records))
+        status["weather_forecast"] = True
+        if measurements:
+            status["weather_measurements"] = True
+    except Exception as e:
+        log.error("Weather step failed (non-critical): %s", e, exc_info=True)
 
-    # 3. Backfill weather
-    update_weather_on_availability(conn)
+    # ── Step 2: HDB availability (CRITICAL — must succeed) ──
+    try:
+        carpark_records = fetch_carpark_availability()
+        n_carpark = load_carpark_availability(conn, carpark_records)
 
-    # 4. Holiday flags
-    update_public_holiday_flags(conn)
+        # Validate: expect ~2000 carparks; warn if significantly fewer
+        unique_cps = len(set(r["carpark_id"] for r in carpark_records))
+        if unique_cps < 500:
+            log.warning(
+                "Low carpark count: %d unique carparks, %d records — API may be partial",
+                unique_cps, len(carpark_records),
+            )
+        else:
+            log.info("Carpark OK: %d unique, %d records", unique_cps, n_carpark)
 
-    # 5. Cleanup
-    cleanup_old_records(conn)
+        status["carpark"] = n_carpark > 0
+    except Exception as e:
+        log.critical("CRITICAL: carpark fetch failed: %s", e, exc_info=True)
+
+    # ── Step 3: Backfill weather on availability ──
+    if status["weather_forecast"]:
+        try:
+            update_weather_on_availability(conn)
+            status["weather_backfill"] = True
+        except Exception as e:
+            log.warning("Weather backfill failed (non-critical): %s", e)
+
+    # ── Step 4: Holiday flags ──
+    try:
+        update_public_holiday_flags(conn)
+        status["holiday_flags"] = True
+    except Exception as e:
+        log.warning("Holiday flag update failed (non-critical): %s", e)
+
+    # ── Step 5: Periodic cleanup (first cycle of each hour) ──
+    if datetime.now().minute < 30:
+        try:
+            cleanup_old_records(conn)
+            status["cleanup"] = True
+        except Exception as e:
+            log.warning("Cleanup failed (non-critical): %s", e)
 
     conn.close()
-    log.info("=== Cycle complete ===")
+
+    elapsed = time.monotonic() - cycle_start
+
+    # ── Summary ──
+    ok = sum(1 for v in status.values() if v)
+    total = len(status)
+    log.info("=== Cycle complete in %.1fs | %d/%d steps OK ===", elapsed, ok, total)
+    for step, passed in status.items():
+        marker = "OK" if passed else "FAIL"
+        log.info("  [%s] %s", marker, step)
+
+    # Exit non-zero if critical step (carpark) failed — lets GitHub Actions detect failures
+    if not status["carpark"]:
+        log.critical("CRITICAL: carpark data fetch failed — returning exit code 1")
+        exit(1)
 
 
 if __name__ == "__main__":
