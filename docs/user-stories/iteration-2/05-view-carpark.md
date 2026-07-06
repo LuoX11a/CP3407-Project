@@ -9,7 +9,7 @@ parent: Iteration 2
 | Field | Detail |
 |-------|--------|
 | Priority | 10 |
-| Estimated Days | 4 |
+| Estimated Days | 5 |
 | Status | **Done** |
 | Persona | Tan Wei Ming (Daily Commuter) |
 

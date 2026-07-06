@@ -9,7 +9,7 @@ parent: Iteration 2
 | Field | Detail |
 |-------|--------|
 | Priority | 30 |
-| Estimated Days | 4 |
+| Estimated Days | 3 |
 | Status | **Todo** |
 | Persona | Developer |
 
