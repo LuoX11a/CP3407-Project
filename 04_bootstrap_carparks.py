@@ -1,7 +1,11 @@
 """
 One-shot script: fetch HDB Carpark Information from data.gov.sg
 and populate the carparks table with address + coordinates.
+
+Usage:
+    DATABASE_URL=postgresql://... python 04_bootstrap_carparks.py
 """
+import os
 import psycopg2
 import psycopg2.extras
 import requests
@@ -10,12 +14,10 @@ from pyproj import Transformer
 API_URL = "https://data.gov.sg/api/action/datastore_search"
 RESOURCE_ID = "d_23f946fa557947f93a8043bbef41dd09"
 
-DB_CONFIG = {
-    "host": "localhost",
-    "dbname": "parkguidesg",
-    "user": "postgres",
-    "password": "parkguide",
-}
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable is required. "
+                       "Example: DATABASE_URL=postgresql://user:pass@host/db python 04_bootstrap_carparks.py")
 
 svy21_to_wgs84 = Transformer.from_crs("EPSG:3414", "EPSG:4326", always_xy=True)
 
@@ -44,7 +46,7 @@ def main():
     records = fetch_all_records()
     print(f"Total: {len(records)} records")
 
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
 
     sql = """
