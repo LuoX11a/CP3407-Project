@@ -61,9 +61,11 @@ Before heading to Orchard Road on Saturday, Siti types "Orchard" into the search
 | Working days | **6** |
 | Velocity（来自 Iteration 1） | **0.5** |
 | Max work capacity | 3 × 6 × 0.5 = **9 天** |
-| Story days completed (carry-over) | **10 天** ✅ |
-| Story days remaining (#3b + #15) | **6 天** 📋 |
-| Total planned | 16 天 |
+| Story days planned | 16 天 |
+| Story days completed | **10 天** ✅ |
+| Story days remaining | **6 天** 📋 |
+
+> ⚠️ 计划 16 天超过产能 9 天，实际以 LuoX11a 单人投入为准。
 
 ### Iteration 3（预测，Velocity = 0.5）
 
@@ -72,9 +74,7 @@ Before heading to Orchard Road on Saturday, Siti types "Orchard" into the search
 | Team members | 3 |
 | Working days | 6 |
 | Max work capacity | 3 × 6 × 0.5 = **9 天** |
-| Story days remaining | **6 天** 📋 |
-
-> **待做合计**：6 天（Iteration 2）+ 6 天（Iteration 3）= **12 天**
+| Story days planned | **6 天** 📋 |
 
 ---
 
