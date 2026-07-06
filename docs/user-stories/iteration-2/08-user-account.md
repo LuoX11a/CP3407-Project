@@ -9,7 +9,7 @@ parent: Iteration 2
 | Field | Detail |
 |-------|--------|
 | Priority | 40 |
-| Estimated Days | 3 |
+| Estimated Days | 5 |
 | Status | **Done** |
 | Persona | Siti Nurul (Weekend Explorer) |
 
