@@ -61,7 +61,7 @@ Before heading to Orchard Road on Saturday, Siti types "Orchard" into the search
 | Working days | **6** |
 | Velocity（来自 Iteration 1） | **0.5** |
 | Max work capacity | 3 × 6 × 0.5 = **9 天** |
-| Story days planned | 7 天 |
+| Story days planned | 16 天 |
 | Story days completed | 7 天 ✅ |
 
 ### Iteration 3（预测，Velocity = 0.5）
@@ -89,14 +89,33 @@ Before heading to Orchard Road on Saturday, Siti types "Orchard" into the search
 
 ---
 
-## Iteration 2 — Completed User Stories
+## Iteration 2 — User Stories (16 days)
 
 | # | Story | Priority | Days | Status |
 |---|-------|----------|------|--------|
 | 5-6 | [View Carparks in List & Map](user-stories/iteration-2/05-view-carpark.md) | 10 | 4 | ✅ Done |
 | 8-10 | [User Account & Favourites](user-stories/iteration-2/08-user-account.md) | 40 | 3 | ✅ Done |
+| 3b | [Carpark Detail Panel](user-stories/iteration-2/03b-carpark-detail.md) | 20 | 5 | 📋 Todo |
+| 15 | [Frontend Architecture Refactor](user-stories/iteration-2/15-frontend-refactor.md) | 30 | 4 | 📋 Todo |
 
-**Iteration 2 Summary**: 2/2 stories completed (100%). Recommendation engine, user accounts, and favourites delivered.
+**Iteration 2 Summary**: 2/4 stories completed, 2 in progress. 已完成 7 天，剩余 9 天。
+
+### Iteration 2 Story Map
+
+```
+Done ✅                    Todo 📋
+┌────────────────────┐    ┌──────────────────────┐
+│ #5-6 View List &   │    │ #3b Carpark Detail   │
+│     Map (4d)       │    │     Panel (5d)        │
+├────────────────────┤    │ 24h history chart,   │
+│ #8-10 User Account │    │ motorcycle lots,      │
+│     & Favourites   │    │ detail modal          │
+│     (3d)           │    ├──────────────────────┤
+└────────────────────┘    │ #15 Frontend Refactor │
+                          │     (4d)              │
+                          │ hooks拆分, ErrorBoundary│
+                          └──────────────────────┘
+```
 
 ---
 
@@ -119,13 +138,14 @@ Before heading to Orchard Road on Saturday, Siti types "Orchard" into the search
 | Iteration | Stories | Completed | Completion Rate |
 |-----------|---------|-----------|-----------------|
 | Iteration 1 | 5 stories (17 days) | 5/5 | 100% |
-| Iteration 2 | 2 stories (7 days) | 2/2 | 100% |
-| **Total** | **7 stories (24 days)** | **7/7** | **100%** |
+| Iteration 2 | 4 stories (16 days) | 2/4 | 50% |
+| **Total** | **9 stories (33 days)** | **7/9** | **78%** |
 
 ### Unfinished / Remaining
 
 | Iteration | Stories | Planned Days |
 |-----------|---------|---------------|
+| Iteration 2 | 2 stories (#3b, #15) | 9 days |
 | Iteration 3 | 3 stories (12, 13, 14) | 6 days |
 
 ---
