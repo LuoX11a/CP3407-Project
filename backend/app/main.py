@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
             _conn.close()
             log.info("Migration applied: %s", _sql_file.name)
         except Exception as _e:
-            log.error("Migration FAILED — %s: %s", _sql_file.name, _e)
+            log.info("Migration %s skipped: %s", _sql_file.name, _e)
 
     model_path = os.getenv("MODEL_PATH", "ml/model/carpark_predictor.joblib")
     try:
