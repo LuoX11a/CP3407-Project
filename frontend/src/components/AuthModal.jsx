@@ -18,7 +18,7 @@ export default function AuthModal({ onClose, onAuth }) {
         mode === "login"
           ? await login(username, password)
           : await register(username, email, password);
-      localStorage.setItem("token", data.token);
+      // Token is now set as httpOnly cookie by the server — no localStorage needed.
       localStorage.setItem("user", JSON.stringify({ id: data.user_id, username: data.username }));
       onAuth(data);
       onClose();
