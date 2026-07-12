@@ -25,6 +25,9 @@ function createIcon(color) {
 
 function popupContent(cp) {
   const rate = (cp.predicted_vacancy_rate * 100).toFixed(0);
+  const navUrl = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    ? `https://maps.apple.com/?daddr=${cp.lat},${cp.lng}&dirflg=d`
+    : `https://www.google.com/maps/dir/?api=1&destination=${cp.lat},${cp.lng}`;
   return `
     <div class="popup-card">
       <h3>${cp.carpark_id}</h3>
@@ -38,6 +41,13 @@ function popupContent(cp) {
       <div class="popup-stats">
         Status: <span style="color:${markerColors[cp.status?.toLowerCase()] || '#4caf50'}">${cp.status}</span>
       </div>
+      <a href="${navUrl}" target="_blank" rel="noopener noreferrer"
+         class="popup-nav-link"
+         style="display:inline-block;margin-top:8px;padding:6px 12px;
+                background:#2196f3;color:#fff;border-radius:6px;
+                text-decoration:none;font-weight:600;font-size:13px;">
+        Navigate
+      </a>
     </div>
   `;
 }
