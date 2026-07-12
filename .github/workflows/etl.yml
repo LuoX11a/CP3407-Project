@@ -24,6 +24,38 @@ jobs:
         run: pip install psycopg2-binary requests pandas pyproj
 
       - name: Run ETL cycle
+        id: etl
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python etl_cloud.py
+
+      - name: Health check — verify recent data
+        if: success() || failure()  # always run, even if ETL step failed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python -c "
+          import os, psycopg2, sys
+          url = os.getenv('DATABASE_URL')
+          conn = psycopg2.connect(url)
+          cur = conn.cursor()
+          cur.execute(\"SELECT MAX(timestamp) FROM availability_logs\")
+          latest = cur.fetchone()[0]
+          cur.execute(\"SELECT COUNT(*) FROM availability_logs WHERE timestamp >= now() - INTERVAL '2 hours'\")
+          recent = cur.fetchone()[0]
+          cur.execute(\"SELECT COUNT(DISTINCT carpark_id) FROM availability_logs WHERE timestamp >= now() - INTERVAL '2 hours'\")
+          unique_cps = cur.fetchone()[0]
+          cur.close()
+          conn.close()
+
+          print(f'Latest record: {latest}')
+          print(f'Records in last 2h: {recent}')
+          print(f'Unique carparks in last 2h: {unique_cps}')
+
+          if unique_cps < 500:
+              print(f'WARNING: Only {unique_cps} carparks in last 2 hours (expected ~2000)')
+              print('The ETL may be failing or the carpark API may be down.')
+              sys.exit(1)
+          else:
+              print('Health check PASSED')
+          "
