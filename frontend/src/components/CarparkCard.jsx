@@ -9,6 +9,7 @@ import {
   Filler,
   Tooltip,
 } from "chart.js";
+import NavButton from "./NavButton";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
@@ -101,6 +102,17 @@ export default function CarparkCard({ carpark, selected, onClick, favourited, on
           <Line data={chartData} options={chartOpts} />
         </div>
       )}
+      <div className="card-footer">
+        <span className="card-weather" title={carpark.weather}>
+          {carpark.weather || "Unknown"}
+        </span>
+        <NavButton
+          lat={carpark.lat}
+          lng={carpark.lng}
+          address={carpark.address}
+          compact
+        />
+      </div>
     </div>
   );
 }

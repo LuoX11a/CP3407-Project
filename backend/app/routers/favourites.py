@@ -1,24 +1,17 @@
 """Favourites CRUD — protected endpoints."""
 
-import os
-import psycopg2
 import psycopg2.extras
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.services.auth import get_current_user
+from app.database import get_sync_conn
 
 router = APIRouter()
-_raw_db_url = os.getenv("DATABASE_URL", "")
-if "channel_binding=" in _raw_db_url:
-    import re
-    _raw_db_url = re.sub(r"[&?]channel_binding=[^&]*", "", _raw_db_url)
-DATABASE_URL = _raw_db_url
 
 
 @router.get("/favourites")
 def list_favourites(user: dict = Depends(get_current_user)):
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
+    with get_sync_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 """
@@ -34,8 +27,6 @@ def list_favourites(user: dict = Depends(get_current_user)):
                 (user["user_id"],),
             )
             rows = cur.fetchall()
-    finally:
-        conn.close()
 
     return {"favourites": [
         {
@@ -54,8 +45,7 @@ def list_favourites(user: dict = Depends(get_current_user)):
 
 @router.post("/favourites/{carpark_id}")
 def add_favourite(carpark_id: str, user: dict = Depends(get_current_user)):
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
+    with get_sync_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT 1 FROM carparks WHERE carpark_id = %s", (carpark_id,))
             if not cur.fetchone():
@@ -64,22 +54,15 @@ def add_favourite(carpark_id: str, user: dict = Depends(get_current_user)):
                 "INSERT INTO favourites (user_id, carpark_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
                 (user["user_id"], carpark_id),
             )
-            conn.commit()
-    finally:
-        conn.close()
     return {"status": "ok"}
 
 
 @router.delete("/favourites/{carpark_id}")
 def remove_favourite(carpark_id: str, user: dict = Depends(get_current_user)):
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
+    with get_sync_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 "DELETE FROM favourites WHERE user_id = %s AND carpark_id = %s",
                 (user["user_id"], carpark_id),
             )
-            conn.commit()
-    finally:
-        conn.close()
     return {"status": "ok"}
