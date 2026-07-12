@@ -1,9 +1,14 @@
 const BASE = "/api/v1";
 
 async function request(path, options = {}) {
-  const token = localStorage.getItem("token");
+  // httpOnly cookies are sent automatically by the browser.
+  // No manual token management needed.
+  // Authorization header kept as fallback for API consumers.
   const headers = { ...options.headers };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const token = localStorage.getItem("token");
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
   if (!res.ok) {
@@ -11,11 +16,6 @@ async function request(path, options = {}) {
     throw new Error(msg || `HTTP ${res.status}`);
   }
   return res.json();
-}
-
-function authHeaders() {
-  const token = localStorage.getItem("token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // ── Recommendations ──────────────────────────────────────
@@ -60,22 +60,20 @@ export function login(username, password) {
   });
 }
 
+export function logout() {
+  return request("/auth/logout", { method: "POST" });
+}
+
 // ── Favourites ────────────────────────────────────────────
 
 export function fetchFavourites() {
-  return request("/favourites", { headers: authHeaders() });
+  return request("/favourites");
 }
 
 export function addFavourite(carparkId) {
-  return request(`/favourites/${carparkId}`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
+  return request(`/favourites/${carparkId}`, { method: "POST" });
 }
 
 export function removeFavourite(carparkId) {
-  return request(`/favourites/${carparkId}`, {
-    method: "DELETE",
-    headers: authHeaders(),
-  });
+  return request(`/favourites/${carparkId}`, { method: "DELETE" });
 }

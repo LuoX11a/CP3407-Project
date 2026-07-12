@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.routers import recommend, carpark, health, auth, favourites
+from app.database import engine
 from app.services.inference import load_model, is_model_loaded
 
 logging.basicConfig(
@@ -67,7 +68,8 @@ async def lifespan(app: FastAPI):
 
     log.info("API ready. Model loaded: %s", is_model_loaded())
     yield
-    log.info("Shutting down.")
+    log.info("Shutting down. Disposing database engine...")
+    await engine.dispose()
 
 
 app = FastAPI(

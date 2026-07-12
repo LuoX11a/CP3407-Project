@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import MapView from "./components/MapView";
 import RecommendationList from "./components/RecommendationList";
 import AuthModal from "./components/AuthModal";
-import { fetchRecommendations, searchCarparks, fetchFavourites, addFavourite, removeFavourite } from "./services/api";
+import { fetchRecommendations, searchCarparks, fetchFavourites, addFavourite, removeFavourite, logout } from "./services/api";
 
 export default function App() {
   const [userLocation, setUserLocation] = useState(null);
@@ -13,7 +13,7 @@ export default function App() {
   const [apiError, setApiError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
 
-  // Auth state
+  // Auth state — restores from localStorage on page load, cleared on logout
   const [authUser, setAuthUser] = useState(() => {
     const stored = localStorage.getItem("user");
     return stored ? JSON.parse(stored) : null;
@@ -108,11 +108,17 @@ export default function App() {
 
   // Auth
   const handleAuth = useCallback((data) => {
-    setAuthUser({ id: data.user_id, username: data.username });
+    const user = { id: data.user_id, username: data.username };
+    setAuthUser(user);
+    localStorage.setItem("user", JSON.stringify(user));
   }, []);
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem("token");
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout();
+    } catch {
+      // cookie cleared regardless
+    }
     localStorage.removeItem("user");
     setAuthUser(null);
     setFavourites([]);

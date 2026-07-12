@@ -1,25 +1,36 @@
-"""POST /api/v1/auth/register, /api/v1/auth/login"""
+"""POST /api/v1/auth/register, /api/v1/auth/login, /api/v1/auth/logout"""
 
 import os
-import psycopg2
 import psycopg2.extras
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 
-from app.models.schemas import RegisterRequest, LoginRequest, AuthResponse
-from app.services.auth import hash_password, verify_password, create_token
+from app.models.schemas import RegisterRequest, LoginRequest
+from app.services.auth import hash_password, verify_password, create_token, COOKIE_NAME
+from app.database import get_sync_conn
 
 router = APIRouter()
-_raw_db_url = os.getenv("DATABASE_URL", "")
-if "channel_binding=" in _raw_db_url:
-    import re
-    _raw_db_url = re.sub(r"[&?]channel_binding=[^&]*", "", _raw_db_url)
-DATABASE_URL = _raw_db_url
+
+# Prod detection for Secure cookie flag
+IS_PRODUCTION = os.getenv("RENDER", "") == "true" or os.getenv("ENVIRONMENT", "") == "production"
 
 
-@router.post("/auth/register", response_model=AuthResponse)
+def _set_token_cookie(response: JSONResponse, token: str):
+    """Set JWT as httpOnly Secure SameSite cookie."""
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=IS_PRODUCTION,
+        samesite="strict" if IS_PRODUCTION else "lax",
+        max_age=86400 * 7,  # 7 days
+        path="/",
+    )
+
+
+@router.post("/auth/register")
 def register(body: RegisterRequest):
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
+    with get_sync_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("SELECT id FROM users WHERE username = %s OR email = %s",
                         (body.username, body.email))
@@ -32,18 +43,18 @@ def register(body: RegisterRequest):
                 (body.username, body.email, hashed),
             )
             user_id = cur.fetchone()["id"]
-            conn.commit()
 
-        token = create_token(user_id, body.username)
-        return AuthResponse(user_id=user_id, username=body.username, token=token)
-    finally:
-        conn.close()
+    token = create_token(user_id, body.username)
+    response = JSONResponse(
+        content={"user_id": user_id, "username": body.username, "status": "ok"}
+    )
+    _set_token_cookie(response, token)
+    return response
 
 
-@router.post("/auth/login", response_model=AuthResponse)
+@router.post("/auth/login")
 def login(body: LoginRequest):
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
+    with get_sync_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 "SELECT id, username, password_hash FROM users WHERE username = %s",
@@ -53,7 +64,23 @@ def login(body: LoginRequest):
             if not user or not verify_password(body.password, user["password_hash"]):
                 raise HTTPException(status_code=401, detail="Invalid username or password")
 
-        token = create_token(user["id"], user["username"])
-        return AuthResponse(user_id=user["id"], username=user["username"], token=token)
-    finally:
-        conn.close()
+    token = create_token(user["id"], user["username"])
+    response = JSONResponse(
+        content={"user_id": user["id"], "username": user["username"], "status": "ok"}
+    )
+    _set_token_cookie(response, token)
+    return response
+
+
+@router.post("/auth/logout")
+def logout():
+    """Clear the auth cookie."""
+    response = JSONResponse(content={"status": "ok"})
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        path="/",
+        httponly=True,
+        secure=IS_PRODUCTION,
+        samesite="strict" if IS_PRODUCTION else "lax",
+    )
+    return response

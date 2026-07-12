@@ -607,3 +607,322 @@ body {
 .switch-mode:hover {
   color: #e94560;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE DESIGN
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Tablet (480px – 768px) ──────────────────────────────── */
+
+@media (max-width: 768px) {
+  .header {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .header h1 {
+    font-size: 17px;
+  }
+
+  .header .subtitle {
+    display: none;
+  }
+
+  .search-form {
+    order: 3;
+    width: 100%;
+  }
+
+  .search-input {
+    flex: 1;
+    width: auto;
+  }
+
+  .header-right {
+    gap: 8px;
+  }
+
+  .gps-info {
+    font-size: 10px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .layout {
+    flex-direction: column;
+  }
+
+  .map-panel {
+    flex: none;
+    height: 50vh;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex: 1;
+    border-left: none;
+    border-top: 1px solid #0f3460;
+  }
+
+  .sidebar-section {
+    padding: 12px;
+  }
+
+  .carpark-card {
+    padding: 12px;
+  }
+
+  .card-stats {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+/* ── Mobile (≤ 480px) ───────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .header {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .header h1 {
+    font-size: 15px;
+  }
+
+  .search-form {
+    gap: 4px;
+  }
+
+  .search-input {
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .search-btn {
+    height: 40px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .btn-login,
+  .btn-logout {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  .gps-info {
+    display: none;
+  }
+
+  .layout {
+    flex-direction: column;
+    position: relative;
+  }
+
+  .map-panel {
+    flex: none;
+    height: 55vh;
+  }
+
+  .map-panel .leaflet-container {
+    height: 100% !important;
+  }
+
+  /* Bottom-sheet sidebar on mobile */
+  .sidebar {
+    width: 100%;
+    max-height: 45vh;
+    border-left: none;
+    border-top: 1px solid #0f3460;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+    position: relative;
+    z-index: 500;
+  }
+
+  .sidebar-section {
+    padding: 10px;
+  }
+
+  .section-header h2 {
+    font-size: 12px;
+  }
+
+  .sort-select {
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+
+  /* Larger touch targets on mobile */
+  .carpark-card {
+    padding: 14px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    min-height: 48px;
+  }
+
+  .card-header .name {
+    font-size: 13px;
+  }
+
+  .card-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .card-stats .stat .value {
+    font-size: 13px;
+  }
+
+  .badge {
+    padding: 3px 10px;
+    font-size: 10px;
+  }
+
+  .trend-chart {
+    height: 60px;
+  }
+
+  /* Card footer */
+  .card-footer {
+    margin-top: 8px;
+    padding-top: 6px;
+  }
+
+  .card-weather {
+    font-size: 10px;
+  }
+
+  .nav-btn-compact {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Star / favourite — bigger tap target */
+  .star-btn {
+    font-size: 18px;
+    padding: 4px;
+    min-width: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Search results */
+  .search-result-item {
+    padding: 12px;
+    min-height: 48px;
+  }
+
+  .fav-item {
+    padding: 12px;
+    min-height: 48px;
+  }
+
+  .btn-remove-fav {
+    font-size: 16px;
+    padding: 6px;
+  }
+
+  /* Auth modal fullscreen on mobile */
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    padding: 24px 20px;
+  }
+
+  .modal input {
+    height: 48px;
+    font-size: 16px;
+  }
+
+  .btn-primary {
+    height: 48px;
+    font-size: 16px;
+  }
+
+  /* Favourites section */
+  .favourites-section .fav-address {
+    max-width: 180px;
+  }
+
+  /* NavButton compact -> full width on mobile cards */
+  .nav-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Popup nav link on mobile */
+  .popup-nav-link {
+    padding: 8px 14px !important;
+    font-size: 14px !important;
+  }
+}
+
+/* ── Desktop wide (≥ 1200px) ─────────────────────────────── */
+
+@media (min-width: 1200px) {
+  .sidebar {
+    width: 420px;
+  }
+
+  .carpark-card {
+    padding: 16px;
+  }
+
+  .card-stats {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+  }
+}
+
+/* ── Navigation button ─────────── */
+
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #2196f3;
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.nav-btn:hover {
+  background: #1976d2;
+}
+
+.nav-btn-compact {
+  padding: 4px 10px;
+  font-size: 11px;
+  gap: 4px;
+  border-radius: 4px;
+}
+
+/* ── Card footer ────────────────── */
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #0f3460;
+}
+
+.card-weather {
+  font-size: 11px;
+  color: #666;
+}
