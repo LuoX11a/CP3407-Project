@@ -75,16 +75,22 @@ def with_retry(fn, max_retries=MAX_RETRIES, backoff=RETRY_BACKOFF):
 # Data fetchers
 # ---------------------------------------------------------------------------
 
-def _fetch_json(url, timeout=30):
-    """Fetch JSON from URL with retry."""
-    resp = requests.get(url, timeout=timeout)
+def _fetch_json(url, connect_timeout=10, read_timeout=90):
+    """Fetch JSON from URL. (connect, read) timeout prevents TCP hangs."""
+    resp = requests.get(
+        url,
+        timeout=(connect_timeout, read_timeout),
+        headers={"User-Agent": "ParkGuideSG-ETL/1.0"},
+    )
     resp.raise_for_status()
     return resp.json()
 
 
 def fetch_carpark_availability() -> list[dict]:
     """Fetch live HDB carpark lot counts. Retries on failure."""
+    log.info("Calling Data.gov.sg carpark-availability API (timeout: connect=10s, read=90s)...")
     data = with_retry(lambda: _fetch_json(HDB_API_URL))()
+    log.info("API response received, parsing %d items...", len(data.get("items", [])))
 
     records = []
     ts_str = data["items"][0]["timestamp"]
@@ -412,9 +418,11 @@ def main():
     except Exception as e:
         log.error("Weather step failed (non-critical): %s", e, exc_info=True)
 
-    # ── Step 2: HDB availability (CRITICAL — must succeed) ──
+    # ── Step 2: HDB availability (CRITICAL) ──
     try:
+        log.info("Step 2: HDB carpark availability...")
         carpark_records = fetch_carpark_availability()
+        log.info("Fetched %d raw carpark records from API", len(carpark_records))
         n_carpark = load_carpark_availability(conn, carpark_records)
 
         # Validate: expect ~2000 carparks; warn if significantly fewer
