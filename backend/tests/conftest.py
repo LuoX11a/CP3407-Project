@@ -16,11 +16,20 @@ os.environ["MODEL_PATH"] = "/nonexistent/model.joblib"
 # ── Mock heavy / DB-dependent modules before any app import ────
 
 _mock_psycopg2 = MagicMock()
+# DBAPI 2.0 attributes required by SQLAlchemy / psycopg2 introspection
+_mock_psycopg2.paramstyle = "pyformat"
+_mock_psycopg2.apilevel = "2.0"
+_mock_psycopg2.threadsafety = 2
+_mock_psycopg2.__version__ = "2.9.9"
+_mock_psycopg2.extensions = MagicMock()
+_mock_psycopg2._psycopg = MagicMock()
+
 _mock_psycopg2.extras = MagicMock()
+_mock_psycopg2.extras.RealDictCursor = MagicMock()
 sys.modules["psycopg2"] = _mock_psycopg2
 sys.modules["psycopg2.extras"] = _mock_psycopg2.extras
 
-for _mod in ("lightgbm", "joblib", "pandas"):
+for _mod in ("lightgbm", "joblib", "pandas", "asyncpg"):
     if _mod not in sys.modules:
         sys.modules[_mod] = MagicMock()
 
@@ -58,9 +67,13 @@ def auth_headers():
 
 @pytest.fixture
 def mock_db():
-    """Configure psycopg2.connect mock for a single test.
+    """Configure the database connection pool mock for a single test.
 
-    Returns (mock_connect, mock_cursor) so tests can set fetchone/fetchall.
+    Returns (mock_conn, mock_cursor) so tests can set fetchone/fetchall.
+
+    Works by patching database._get_sync_pool() to return a mock pool
+    whose getconn() returns the mock connection, so both the legacy
+    connect() path and the pool path resolve to the same mock objects.
     """
     cur = MagicMock()
     conn = MagicMock()
@@ -69,5 +82,9 @@ def mock_db():
     conn.cursor.return_value.__enter__.return_value = cur
     conn.cursor.return_value.__exit__.return_value = False
 
-    with patch.object(_mock_psycopg2, "connect", return_value=conn):
+    # Patch the sync connection pool so get_sync_conn() uses our mock
+    with patch(
+        "app.database._get_sync_pool",
+        return_value=MagicMock(getconn=MagicMock(return_value=conn)),
+    ):
         yield conn, cur
