@@ -29,8 +29,12 @@ class TestRegisterEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        assert "token" in data
         assert data["username"] == "newuser"
+        assert data["status"] == "ok"
+        # Iteration 2: JWT is in httpOnly cookie, not in JSON body
+        set_cookie = response.headers.get("set-cookie", "")
+        assert "token=" in set_cookie
+        assert "HttpOnly" in set_cookie
 
 
 class TestLoginEndpoint:
@@ -67,3 +71,38 @@ class TestProtectedEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert "favourites" in data
+
+
+class TestCookieAuth:
+    def test_login_sets_httponly_cookie(self, client, mock_db):
+        """Login response includes HttpOnly Set-Cookie header with JWT."""
+        conn, cur = mock_db
+        import bcrypt
+        from app.services.auth import hash_password
+        hashed = hash_password("correctpassword")
+        cur.fetchone.return_value = {
+            "id": 1,
+            "username": "testuser",
+            "password_hash": hashed,
+        }
+
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "testuser", "password": "correctpassword"},
+        )
+
+        assert response.status_code == 200
+        set_cookie = response.headers.get("set-cookie", "")
+        assert "token=" in set_cookie
+        assert "HttpOnly" in set_cookie
+        assert "SameSite" in set_cookie
+        assert "Path=/" in set_cookie
+
+    def test_logout_clears_cookie(self, client):
+        """Logout response clears the auth cookie."""
+        response = client.post("/api/v1/auth/logout")
+
+        assert response.status_code == 200
+        set_cookie = response.headers.get("set-cookie", "")
+        # Cookie should be cleared (empty value or max-age=0)
+        assert "token=" in set_cookie.lower() or set_cookie == ""
