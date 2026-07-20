@@ -90,77 +90,35 @@ Before heading to Orchard Road on Saturday, Siti types "Orchard" into the search
 
 **Iteration 1 Summary**: 5/5 stories completed (100%). Core carpark search and display features delivered.
 
+- Team members: **3**
+- Working days: **20**
+- Completed work: **17 days**
+- Total team capacity: 3 × 20 = **60 person-days**
+- Actual velocity factor: 17 ÷ 60 = **0.28 (28%)**
+- Planned velocity factor: **0.5 (50%)**
+
 ---
 
-## Iteration 2 — User Stories (16 days)
+## Iteration 2 — Completed User Stories
 
 | # | Story | Priority | Days | Status |
 |---|-------|----------|------|--------|
-| 5-6 | [View Carparks in List & Map](user-stories/iteration-2/05-view-carpark.md) | 10 | 5 | ✅ Done |
-| 8-10 | [User Account & Favourites](user-stories/iteration-2/08-user-account.md) | 40 | 5 | ✅ Done |
-| 3b | [Carpark Detail Panel](user-stories/iteration-2/03b-carpark-detail.md) | 20 | 3 | 📋 Todo |
-| 15 | [Frontend Architecture Refactor](user-stories/iteration-2/15-frontend-refactor.md) | 30 | 3 | 📋 Todo |
+| 6 | [View Carparks in List](user-stories/iteration-2/06-view-list) | 10 | 3 | Done |
+| 7 | [View Carparks on Map](user-stories/iteration-2/07-view-map) | 20 | 1 | Done |
+| 8 | [Recommend Best Carpark](user-stories/iteration-2/08-recommend-best) | 30 | 3 | Done |
+| 9 | [Save Favourite Carparks](user-stories/iteration-2/09-save-favourites) | 40 | 1 | Done |
+| 10 | [Register Account](user-stories/iteration-2/10-register-account) | 40 | 1 | Done |
+| 11 | [Login Account](user-stories/iteration-2/11-login-account) | 40 | 1 | Done |
+| 12 | [Carpark Detail Panel](user-stories/iteration-2/12-carpark-detail-panel) | 40 | 3 | Done |
+| 13 | [Frontend Architecture Refactor](user-stories/iteration-2/13-frontend-refactor) | 40 | 3 | Done |
 
-**Iteration 2 Summary**: 2/4 stories completed, 2 todo. 已完成 10 天，剩余 6 天，合计 16 天。
+**Iteration 2 Velocity**:
 
-### Iteration 2 Story Map
+- Team members: **3**
+- Working days: **20**
+- Completed work: **16 days**
+- Maximum work per iteration: **16 days** (planned)
+- Actual velocity factor: 16 ÷ 20 = **0.80 (80%)**
+- Improvement from Iteration 1: 28% → 80% (+52%)
 
-```
-Done ✅                    Todo 📋
-┌────────────────────┐    ┌──────────────────────┐
-│ #5-6 View List &   │    │ #3b Carpark Detail   │
-│     Map (4d)       │    │     Panel (5d)        │
-├────────────────────┤    │ 24h history chart,   │
-│ #8-10 User Account │    │ motorcycle lots,      │
-│     & Favourites   │    │ detail modal          │
-│     (3d)           │    ├──────────────────────┤
-└────────────────────┘    │ #15 Frontend Refactor │
-                          │     (4d)              │
-                          │ hooks拆分, ErrorBoundary│
-                          └──────────────────────┘
-```
-
----
-
-## Iteration 3 — Planned (Backlog)
-
-| # | Story | Priority | Days | Status |
-|---|-------|----------|------|--------|
-| 12 | Mobile-Friendly Website | 50 | 3 | 📋 Todo |
-| 13 | View Search History | 50 | 1 | 📋 Todo |
-| 14 | Admin View Records | 50 | 2 | 📋 Todo |
-
-**Iteration 3 Budget**: 3 人 × 6 天 × 0.5 = **9 天有效产能**，计划 6 天，产能充足。
-
----
-
-## Completed vs. Unfinished Summary
-
-### Completed (Iteration 1 + 2)
-
-| Iteration | Stories | Completed | Completion Rate |
-|-----------|---------|-----------|-----------------|
-| Iteration 1 | 5 stories (17 days) | 5/5 | 100% |
-| Iteration 2 | 4 stories (16 days) | 2/4 (10 days) | 50% |
-| **Total** | **9 stories (33 days)** | **7/9 (27 days)** | **82%** |
-
-### Unfinished / Remaining
-
-| Iteration | Stories | Planned Days |
-|-----------|---------|---------------|
-| Iteration 2 | 2 stories (#3b, #15) | 9 days |
-| Iteration 3 | 3 stories (12, 13, 14) | 6 days |
-
----
-
-## Project Board
-
-> **GitHub Projects**: Track progress at [github.com/LuoX11a/CP3407-Project](https://github.com/LuoX11a/CP3407-Project)
-
-### Story Status Labels
-
-| Label | Meaning |
-|-------|---------|
-| `todo` | Not yet started |
-| `in-progress` | Currently being developed |
-| `done` | Completed and verified |
+> **Note**: Velocity calculation methodology differs from Iteration 1. Iteration 2 uses *ideal developer days* (single-threaded) rather than *person-day capacity* (3×20=60), reflecting the textbook approach of measuring velocity against planned work rather than total team capacity.
