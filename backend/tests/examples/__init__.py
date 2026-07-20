@@ -1,0 +1,1 @@
+# Mock object framework examples

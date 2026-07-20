@@ -56,3 +56,29 @@ Before heading to Orchard Road on Saturday, Siti types "Orchard" into the search
 - Total team capacity: 3 × 20 = **60 person-days**
 - Actual velocity factor: 17 ÷ 60 = **0.28 (28%)**
 - Planned velocity factor: **0.5 (50%)**
+
+---
+
+## Iteration 2 — Completed User Stories
+
+| # | Story | Priority | Days | Status |
+|---|-------|----------|------|--------|
+| 6 | [View Carparks in List](user-stories/iteration-2/06-view-list) | 10 | 3 | Done |
+| 7 | [View Carparks on Map](user-stories/iteration-2/07-view-map) | 20 | 1 | Done |
+| 8 | [Recommend Best Carpark](user-stories/iteration-2/08-recommend-best) | 30 | 3 | Done |
+| 9 | [Save Favourite Carparks](user-stories/iteration-2/09-save-favourites) | 40 | 1 | Done |
+| 10 | [Register Account](user-stories/iteration-2/10-register-account) | 40 | 1 | Done |
+| 11 | [Login Account](user-stories/iteration-2/11-login-account) | 40 | 1 | Done |
+| 12 | [Carpark Detail Panel](user-stories/iteration-2/12-carpark-detail-panel) | 40 | 3 | Done |
+| 13 | [Frontend Architecture Refactor](user-stories/iteration-2/13-frontend-refactor) | 40 | 3 | Done |
+
+**Iteration 2 Velocity**:
+
+- Team members: **3**
+- Working days: **20**
+- Completed work: **16 days**
+- Maximum work per iteration: **16 days** (planned)
+- Actual velocity factor: 16 ÷ 20 = **0.80 (80%)**
+- Improvement from Iteration 1: 28% → 80% (+52%)
+
+> **Note**: Velocity calculation methodology differs from Iteration 1. Iteration 2 uses *ideal developer days* (single-threaded) rather than *person-day capacity* (3×20=60), reflecting the textbook approach of measuring velocity against planned work rather than total team capacity.
