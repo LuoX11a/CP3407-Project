@@ -2,13 +2,18 @@ name: ETL Pipeline
 
 on:
   schedule:
-    # Runs every 30 minutes (at :05 and :35 past the hour, to avoid API congestion at :00/:30)
+    # Every 30 minutes
     - cron: "5,35 * * * *"
-  workflow_dispatch:  # allow manual trigger
+  workflow_dispatch:
+
+# Prevent overlapping runs from cancelling each other
+concurrency:
+  group: etl-pipeline
+  cancel-in-progress: false
 
 jobs:
   etl:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 12
 
     steps:
@@ -30,13 +35,14 @@ jobs:
         run: python etl_cloud.py
 
       - name: Health check — verify recent data
-        if: success() || failure()  # always run, even if ETL step failed
+        if: success() || failure()
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           python -c "
           import os, psycopg2, sys
           url = os.getenv('DATABASE_URL')
+          url = url.replace('&channel_binding=require', '').replace('?channel_binding=require&', '?').replace('?channel_binding=require', '')
           conn = psycopg2.connect(url)
           cur = conn.cursor()
           cur.execute(\"SELECT MAX(timestamp) FROM availability_logs\")
@@ -47,14 +53,11 @@ jobs:
           unique_cps = cur.fetchone()[0]
           cur.close()
           conn.close()
-
           print(f'Latest record: {latest}')
           print(f'Records in last 2h: {recent}')
           print(f'Unique carparks in last 2h: {unique_cps}')
-
           if unique_cps < 500:
               print(f'WARNING: Only {unique_cps} carparks in last 2 hours (expected ~2000)')
-              print('The ETL may be failing or the carpark API may be down.')
               sys.exit(1)
           else:
               print('Health check PASSED')
