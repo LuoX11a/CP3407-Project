@@ -7,6 +7,7 @@ from app.models.schemas import (
     SearchResponse, SearchResult,
 )
 from app.services.geospatial import query_carpark_detail, query_carpark_history, search_carparks_by_address
+from app.services.rate_info import get_hourly_rate, has_ev_charging
 
 router = APIRouter()
 
@@ -26,6 +27,8 @@ def carpark_search(
             lng=r["lng"],
             available_lots=r.get("available_lots"),
             vacancy_rate=float(r["vacancy_rate"]) if r.get("vacancy_rate") is not None else None,
+            hourly_rate=get_hourly_rate(r["carpark_id"], r["lat"], r["lng"]),
+            ev_charging=has_ev_charging(r["carpark_id"]),
         )
         for r in rows
     ])
@@ -52,6 +55,8 @@ def carpark_detail(carpark_id: str):
             latest_vacancy=detail.get("latest_vacancy"),
             latest_weather=detail.get("latest_weather"),
             latest_updated=detail["latest_updated"].isoformat() if detail.get("latest_updated") else None,
+            hourly_rate=get_hourly_rate(detail["carpark_id"], detail["lat"], detail["lng"]),
+            ev_charging=has_ev_charging(detail["carpark_id"]),
         ),
         history=[
             HistoryPoint(
