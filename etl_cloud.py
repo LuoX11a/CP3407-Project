@@ -11,6 +11,7 @@ import time
 import logging
 from datetime import datetime
 from functools import wraps
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 import pandas as pd
 import psycopg2
@@ -36,6 +37,13 @@ RETRY_BACKOFF = 2  # seconds, exponential
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL environment variable is required")
 
+# Strip channel_binding=require for psycopg2/libpq compatibility.
+# Neon's connection string includes this parameter, but psycopg2's
+# underlying libpq does not support it.
+DATABASE_URL = DATABASE_URL.replace("&channel_binding=require", "").replace(
+    "?channel_binding=require&", "?"
+).replace("?channel_binding=require", "")
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -48,6 +56,27 @@ svy21_to_wgs84 = Transformer.from_crs("EPSG:3414", "EPSG:4326", always_xy=True)
 # ---------------------------------------------------------------------------
 # Retry helper
 # ---------------------------------------------------------------------------
+
+HARD_TIMEOUT = 120  # seconds — absolute wall-clock deadline per fetch
+
+def _fetch_with_hard_timeout(fn, *args, timeout=HARD_TIMEOUT, **kwargs):
+    """Run fn in a thread and enforce a hard wall-clock timeout.
+
+    requests timeout=(connect, read) is per-socket-operation, not total.
+    If the server dribbles bytes slowly enough, the total call can exceed
+    the configured timeout.  This wrapper kills the whole attempt after
+    `timeout` seconds regardless.
+    """
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(fn, *args, **kwargs)
+        try:
+            return future.result(timeout=timeout)
+        except FuturesTimeoutError:
+            log.error("Hard timeout (%ds) exceeded – aborting fetch", timeout)
+            raise TimeoutError(
+                f"Fetch did not complete within {timeout} seconds"
+            )
+
 
 def with_retry(fn, max_retries=MAX_RETRIES, backoff=RETRY_BACKOFF):
     """Decorator: retry on HTTP or connection errors with exponential backoff."""
@@ -87,9 +116,17 @@ def _fetch_json(url, connect_timeout=10, read_timeout=90):
 
 
 def fetch_carpark_availability() -> list[dict]:
-    """Fetch live HDB carpark lot counts. Retries on failure."""
-    log.info("Calling Data.gov.sg carpark-availability API (timeout: connect=10s, read=90s)...")
-    data = with_retry(lambda: _fetch_json(HDB_API_URL))()
+    """Fetch live HDB carpark lot counts. Retries on failure.
+
+    Wrapped in a hard 120 s wall-clock timeout.  The requests timeout
+    tuple (connect=10s, read=90s) handles the socket level; the hard
+    timeout catches the case where the server sends data slowly enough
+    to never trigger the socket timeout.
+    """
+    log.info("Calling Data.gov.sg carpark-availability API (timeout: connect=10s, read=90s, hard=120s)...")
+    data = with_retry(
+        lambda: _fetch_with_hard_timeout(_fetch_json, HDB_API_URL)
+    )()
     log.info("API response received, parsing %d items...", len(data.get("items", [])))
 
     records = []
@@ -115,7 +152,7 @@ def fetch_carpark_availability() -> list[dict]:
 
 def fetch_weather() -> tuple[list[dict], list[dict]]:
     """Fetch NEA 2-hour weather forecast. Retries on failure."""
-    data = with_retry(lambda: _fetch_json(NEA_API_URL))()
+    data = with_retry(lambda: _fetch_with_hard_timeout(_fetch_json, NEA_API_URL))()
 
     stations = []
     for s in data.get("area_metadata", []):
