@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import MapView from "./components/MapView";
 import RecommendationList from "./components/RecommendationList";
 import AuthModal from "./components/AuthModal";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { fetchRecommendations, searchCarparks, fetchFavourites, addFavourite, removeFavourite, logout } from "./services/api";
 
 export default function App() {
@@ -158,7 +159,7 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <ErrorBoundary>
       <header className="header">
         <div>
           <h1>ParkGuideSG</h1>
@@ -281,6 +282,6 @@ export default function App() {
           onAuth={handleAuth}
         />
       )}
-    </>
+    </ErrorBoundary>
   );
 }
