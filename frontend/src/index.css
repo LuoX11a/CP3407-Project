@@ -926,3 +926,27 @@ body {
   font-size: 11px;
   color: #666;
 }
+
+.card-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.rate-tag {
+  background: #1a1a2e;
+  color: #4caf50;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.ev-tag {
+  background: #0d47a1;
+  color: #64b5f6;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
