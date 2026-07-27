@@ -103,9 +103,21 @@ export default function CarparkCard({ carpark, selected, onClick, favourited, on
         </div>
       )}
       <div className="card-footer">
-        <span className="card-weather" title={carpark.weather}>
-          {carpark.weather || "Unknown"}
-        </span>
+        <div className="card-meta">
+          {carpark.hourly_rate && carpark.hourly_rate !== "N/A" && (
+            <span className="rate-tag" title="Hourly parking rate">
+              {carpark.hourly_rate}
+            </span>
+          )}
+          {carpark.ev_charging && (
+            <span className="ev-tag" title="EV charging available">
+              EV
+            </span>
+          )}
+          <span className="card-weather" title={carpark.weather}>
+            {carpark.weather || "Unknown"}
+          </span>
+        </div>
         <NavButton
           lat={carpark.lat}
           lng={carpark.lng}
