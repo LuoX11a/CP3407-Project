@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import MapView from "./components/MapView";
 import RecommendationList from "./components/RecommendationList";
 import AuthModal from "./components/AuthModal";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { fetchRecommendations, searchCarparks, fetchFavourites, addFavourite, removeFavourite, logout } from "./services/api";
+
+const REFRESH_INTERVAL = 60000; // 60 seconds
 
 export default function App() {
   const [userLocation, setUserLocation] = useState(null);
@@ -18,7 +20,7 @@ export default function App() {
   const [mode, setMode] = useState("realtime");
   const [forecastTime, setForecastTime] = useState("");
 
-  // Auth state — restores from localStorage on page load, cleared on logout
+  // Auth
   const [authUser, setAuthUser] = useState(() => {
     const stored = localStorage.getItem("user");
     return stored ? JSON.parse(stored) : null;
@@ -33,12 +35,19 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
 
+  // Bottom sheet drag state
+  const [sheetExpanded, setSheetExpanded] = useState(true);
+  const sheetRef = useRef(null);
+  const sheetHeight = useRef(0);
+
   const isLoggedIn = !!authUser;
 
   // Get user GPS position
   useEffect(() => {
     if (!navigator.geolocation) {
-      setLocationError("Geolocation not supported by your browser");
+      setLocationError("Geolocation not supported");
+      setUserLocation([1.3521, 103.8198]);
+      setLocationLoading(false);
       return;
     }
 
@@ -48,7 +57,7 @@ export default function App() {
         setLocationError(null);
         setLocationLoading(false);
       },
-      (err) => {
+      () => {
         setLocationError("Location access denied. Using default Singapore location.");
         setUserLocation([1.3521, 103.8198]);
         setLocationLoading(false);
@@ -59,7 +68,7 @@ export default function App() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // Load favourites when logged in
+  // Load favourites
   useEffect(() => {
     if (isLoggedIn) {
       fetchFavourites()
@@ -70,14 +79,21 @@ export default function App() {
     }
   }, [isLoggedIn]);
 
-  // Fetch recommendations when userLocation or mode/forecast changes
+  // Measure bottom sheet height for map offset
+  useEffect(() => {
+    if (sheetRef.current) {
+      sheetHeight.current = sheetRef.current.offsetHeight;
+    }
+  }, [sheetExpanded, results]);
+
+  // Fetch recommendations
   const loadRecommendations = useCallback(async () => {
     if (!userLocation) return;
     setLoading(true);
     setApiError(null);
     try {
       const forecastParam = mode === "forecast" && forecastTime ? forecastTime : null;
-      const data = await fetchRecommendations(userLocation[0], userLocation[1], 5, 3000, forecastParam);
+      const data = await fetchRecommendations(userLocation[0], userLocation[1], 8, 3000, forecastParam);
       setResults(data.results || []);
       if (data.results?.length > 0 && !selectedId) {
         setSelectedId(data.results[0].carpark_id);
@@ -89,12 +105,21 @@ export default function App() {
     }
   }, [userLocation, selectedId, mode, forecastTime]);
 
+  // Initial load + fixed interval refresh
   useEffect(() => {
     loadRecommendations();
+    const timer = setInterval(loadRecommendations, REFRESH_INTERVAL);
+    return () => clearInterval(timer);
   }, [loadRecommendations]);
+
+  // Reload when mode or forecastTime changes
+  useEffect(() => {
+    loadRecommendations();
+  }, [mode, forecastTime]);
 
   const handleSelect = useCallback((cp) => {
     setSelectedId(cp.carpark_id);
+    setSheetExpanded(true);
   }, []);
 
   // Address search
@@ -120,11 +145,7 @@ export default function App() {
   }, []);
 
   const handleLogout = useCallback(async () => {
-    try {
-      await logout();
-    } catch {
-      // cookie cleared regardless
-    }
+    try { await logout(); } catch {}
     localStorage.removeItem("user");
     setAuthUser(null);
     setFavourites([]);
@@ -150,9 +171,7 @@ export default function App() {
             vacancy_rate: cp.predicted_vacancy_rate, weather_condition: cp.weather },
         ]);
       }
-    } catch {
-      // silently fail
-    }
+    } catch {}
   }, [isLoggedIn, favourites]);
 
   // Fly to search result
@@ -163,26 +182,63 @@ export default function App() {
     setSearchQuery("");
   }, []);
 
+  // Get today's default datetime for forecast picker
+  const nowLocal = new Date();
+  nowLocal.setMinutes(nowLocal.getMinutes() - nowLocal.getTimezoneOffset());
+  const defaultForecastTime = nowLocal.toISOString().slice(0, 16);
+
   return (
     <ErrorBoundary>
-      <header className="header">
-        <div>
-          <h1>ParkGuideSG</h1>
-          <div className="subtitle">Real-time HDB carpark recommendations</div>
-        </div>
+      <div id="app-root">
+        {/* Map fills everything */}
+        <MapView
+          results={results}
+          userLocation={userLocation}
+          selectedId={selectedId}
+          onSelect={handleSelect}
+          bottomSheetHeight={sheetExpanded ? sheetHeight.current : 0}
+        />
 
-        <div className="mode-toggle">
+        {/* Top bar — search + auth */}
+        <header className="top-bar">
+          <div className="top-bar-left">
+            <h1 className="app-title">ParkGuideSG</h1>
+          </div>
+          <form className="search-form" onSubmit={handleSearch}>
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search address or area..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button type="submit" className="search-btn">Search</button>
+          </form>
+          <div className="top-bar-right">
+            {isLoggedIn ? (
+              <>
+                <span className="username">{authUser.username}</span>
+                <button onClick={handleLogout} className="btn-logout">Logout</button>
+              </>
+            ) : (
+              <button onClick={() => setShowAuth(true)} className="btn-login">Login</button>
+            )}
+          </div>
+        </header>
+
+        {/* Mode toggle — floating above bottom sheet */}
+        <div className="mode-bar">
           <button
             className={`mode-btn ${mode === "realtime" ? "active" : ""}`}
             onClick={() => setMode("realtime")}
           >
-            🚗 Now
+            🟢 Now
           </button>
           <button
             className={`mode-btn ${mode === "forecast" ? "active" : ""}`}
             onClick={() => setMode("forecast")}
           >
-            📅 Plan Ahead
+            🔮 Plan Ahead
           </button>
           {mode === "forecast" && (
             <input
@@ -190,129 +246,112 @@ export default function App() {
               className="time-picker"
               value={forecastTime}
               onChange={(e) => setForecastTime(e.target.value)}
-              placeholder="Select date & time"
+              min={defaultForecastTime}
             />
           )}
         </div>
 
-        <form className="search-form" onSubmit={handleSearch}>
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search address or area..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <button type="submit" className="search-btn">Search</button>
-        </form>
-
-        <div className="header-right">
-          <div className="gps-info">
-            {locationLoading && !userLocation
-              ? "Acquiring GPS location..."
-              : userLocation
-                ? `GPS: ${userLocation[0].toFixed(4)}, ${userLocation[1].toFixed(4)}`
-                : locationError || "Location unavailable"}
+        {/* Bottom sheet — results overlay */}
+        <div
+          ref={sheetRef}
+          className={`bottom-sheet ${sheetExpanded ? "expanded" : "collapsed"}`}
+        >
+          <div
+            className="sheet-handle"
+            onClick={() => setSheetExpanded(!sheetExpanded)}
+          >
+            <div className="handle-bar" />
+            <span className="handle-label">
+              {results.length} carparks nearby
+              {sheetExpanded ? " — tap to collapse" : " — tap to expand"}
+            </span>
           </div>
-          {isLoggedIn ? (
-            <div className="user-info">
-              <span className="username">{authUser.username}</span>
-              <button onClick={handleLogout} className="btn-logout">Logout</button>
-            </div>
-          ) : (
-            <button onClick={() => setShowAuth(true)} className="btn-login">Login</button>
-          )}
-        </div>
-      </header>
 
-      <div className="layout">
-        <div className="map-panel">
-          <MapView
-            results={results}
-            userLocation={userLocation}
-            selectedId={selectedId}
-            onSelect={handleSelect}
-          />
-        </div>
-
-        <div className="sidebar">
-          {showSearchResults && (
-            <div className="sidebar-section search-results">
-              <div className="section-header">
-                <h2>Search Results</h2>
-                <button className="btn-close" onClick={() => setShowSearchResults(false)}>✕</button>
-              </div>
-              {searchResults.length === 0 ? (
-                <p className="no-results">No carparks found</p>
-              ) : (
-                searchResults.map((cp) => (
-                  <div
-                    key={cp.carpark_id}
-                    className="search-result-item"
-                    onClick={() => handleSearchSelect(cp)}
-                  >
-                    <span className="sr-name">{cp.carpark_id}</span>
-                    <span className="sr-address">{cp.address}</span>
-                    <span className="sr-lots">
-                      {cp.available_lots != null ? `${cp.available_lots} available` : ""}
-                    </span>
+          {sheetExpanded && (
+            <div className="sheet-content">
+              {/* Search results */}
+              {showSearchResults && (
+                <div className="search-results-panel">
+                  <div className="section-header">
+                    <h3>Search Results</h3>
+                    <button className="btn-close" onClick={() => setShowSearchResults(false)}>✕</button>
                   </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {isLoggedIn && favourites.length > 0 && (
-            <div className="sidebar-section favourites-section">
-              <h2>Your Favourites</h2>
-              {favourites.map((f) => (
-                <div
-                  key={f.carpark_id}
-                  className="fav-item"
-                  onClick={() => handleSearchSelect(f)}
-                >
-                  <span className="star">★</span>
-                  <div>
-                    <div className="fav-name">{f.carpark_id}</div>
-                    <div className="fav-address">{f.address}</div>
-                  </div>
-                  <button
-                    className="btn-remove-fav"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleToggleFavourite(f);
-                    }}
-                  >
-                    ✕
-                  </button>
+                  {searchResults.length === 0 ? (
+                    <p className="no-results">No carparks found</p>
+                  ) : (
+                    searchResults.map((cp) => (
+                      <div
+                        key={cp.carpark_id}
+                        className="search-result-item"
+                        onClick={() => handleSearchSelect(cp)}
+                      >
+                        <span className="sr-name">{cp.carpark_id}</span>
+                        <span className="sr-address">{cp.address}</span>
+                        <span className="sr-lots">
+                          {cp.available_lots != null ? `${cp.available_lots} available` : ""}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
-              ))}
+              )}
+
+              {/* Favourites */}
+              {isLoggedIn && favourites.length > 0 && (
+                <div className="favourites-panel">
+                  <h3>★ Your Favourites</h3>
+                  {favourites.map((f) => (
+                    <div
+                      key={f.carpark_id}
+                      className="fav-item"
+                      onClick={() => handleSearchSelect(f)}
+                    >
+                      <span className="star">★</span>
+                      <div>
+                        <div className="fav-name">{f.carpark_id}</div>
+                        <div className="fav-address">{f.address}</div>
+                      </div>
+                      <button
+                        className="btn-remove-fav"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleFavourite(f);
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Recommendations */}
+              <RecommendationList
+                results={results}
+                loading={loading}
+                error={apiError}
+                onRetry={loadRecommendations}
+                selectedId={selectedId}
+                onSelect={handleSelect}
+                favourites={favourites}
+                onToggleFavourite={handleToggleFavourite}
+                isLoggedIn={isLoggedIn}
+                locationLoading={locationLoading}
+                mode={mode}
+                forecastTime={forecastTime}
+              />
             </div>
           )}
-
-          <RecommendationList
-            results={results}
-            loading={loading}
-            error={apiError}
-            onRetry={loadRecommendations}
-            selectedId={selectedId}
-            onSelect={handleSelect}
-            favourites={favourites}
-            onToggleFavourite={handleToggleFavourite}
-            isLoggedIn={isLoggedIn}
-            locationLoading={locationLoading}
-            mode={mode}
-            forecastTime={forecastTime}
-          />
         </div>
-      </div>
 
-      {showAuth && (
-        <AuthModal
-          onClose={() => setShowAuth(false)}
-          onAuth={handleAuth}
-        />
-      )}
+        {/* Auth modal */}
+        {showAuth && (
+          <AuthModal
+            onClose={() => setShowAuth(false)}
+            onAuth={handleAuth}
+          />
+        )}
+      </div>
     </ErrorBoundary>
   );
 }

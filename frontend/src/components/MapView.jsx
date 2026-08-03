@@ -15,7 +15,7 @@ function createIcon(color) {
     html: `<div style="
       width:24px;height:24px;border-radius:50%;
       background:${color};border:3px solid #fff;
-      box-shadow:0 2px 6px rgba(0,0,0,0.5);
+      box-shadow:0 2px 6px rgba(0,0,0,0.3);
     "></div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
@@ -52,27 +52,30 @@ function popupContent(cp) {
   `;
 }
 
-export default function MapView({ results, userLocation, selectedId, onSelect }) {
+export default function MapView({ results, userLocation, selectedId, onSelect, bottomSheetHeight = 0 }) {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersLayer = useRef(null);
   const userMarker = useRef(null);
   const hasCentered = useRef(false);
 
-  // Init map once
+  // Init map
   useEffect(() => {
     if (mapInstance.current) return;
 
     const map = L.map(mapRef.current, {
       center: SINGAPORE_CENTER,
       zoom: 14,
-      zoomControl: true,
+      zoomControl: false,
     });
 
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | Data.gov.sg',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> | Data.gov.sg',
       maxZoom: 19,
     }).addTo(map);
+
+    // Zoom control in bottom-right (away from results panel)
+    L.control.zoom({ position: "bottomright" }).addTo(map);
 
     mapInstance.current = map;
     markersLayer.current = L.layerGroup().addTo(map);
@@ -83,7 +86,7 @@ export default function MapView({ results, userLocation, selectedId, onSelect })
     };
   }, []);
 
-  // Update user marker — center once on first location, then only update marker
+  // Update user marker — center on first location with offset for bottom sheet
   useEffect(() => {
     const map = mapInstance.current;
     if (!map || !userLocation) return;
@@ -104,13 +107,26 @@ export default function MapView({ results, userLocation, selectedId, onSelect })
       userMarker.current = L.marker(userLocation, { icon }).addTo(map)
         .bindPopup("Your location");
 
-      // Center on first location only
       if (!hasCentered.current) {
-        map.setView(userLocation, map.getZoom());
+        map.setView(userLocation, 15);
+        // Shift center up so pin is in visible top-half of map
+        if (bottomSheetHeight > 0) {
+          map.panBy([0, -bottomSheetHeight / 2], { animate: false });
+        }
         hasCentered.current = true;
       }
     }
-  }, [userLocation]);
+  }, [userLocation, bottomSheetHeight]);
+
+  // Re-center on user
+  const handleRecenter = () => {
+    const map = mapInstance.current;
+    if (!map || !userLocation) return;
+    map.setView(userLocation, 15);
+    if (bottomSheetHeight > 0) {
+      setTimeout(() => map.panBy([0, -bottomSheetHeight / 2]), 10);
+    }
+  };
 
   // Update carpark markers
   useEffect(() => {
@@ -126,15 +142,27 @@ export default function MapView({ results, userLocation, selectedId, onSelect })
         .bindPopup(popupContent(cp));
 
       marker.on("click", () => onSelect(cp));
-
       layer.addLayer(marker);
 
-      // Open popup for selected
       if (cp.carpark_id === selectedId) {
         marker.openPopup();
       }
     });
   }, [results, selectedId, onSelect]);
 
-  return <div ref={mapRef} className="map-container" />;
+  return (
+    <div ref={mapRef} className="map-container">
+      <button
+        className="recenter-btn"
+        onClick={handleRecenter}
+        title="Re-center on my location"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+        </svg>
+      </button>
+    </div>
+  );
 }
