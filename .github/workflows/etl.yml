@@ -1,9 +1,10 @@
 name: ETL Pipeline
 
 on:
-  schedule:
-    # Every 30 minutes
-    - cron: "5,35 * * * *"
+  # 2026-08-03 FINAL FREEZE: schedule disabled to preserve data snapshot for final model
+  # schedule:
+  #   # Every 30 minutes
+  #   - cron: "5,35 * * * *"
   workflow_dispatch:
 
 # Prevent overlapping runs from cancelling each other

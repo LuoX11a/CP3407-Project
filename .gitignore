@@ -1,10 +1,13 @@
 __pycache__/
 *.pyc
 *.pyo
-*.joblib
 .env
 *.egg-info/
 /dist/
 .venv/
 venv/
 node_modules/
+# Local backups (too large for git)
+data/final-export-*/
+# Allow the trained model in ml/model/
+!ml/model/carpark_predictor.joblib
