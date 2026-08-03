@@ -18,6 +18,8 @@ export default function RecommendationList({
   onToggleFavourite,
   isLoggedIn,
   locationLoading,
+  mode = "realtime",
+  forecastTime = "",
 }) {
   const [sortBy, setSortBy] = useState("distance");
 
@@ -42,6 +44,12 @@ export default function RecommendationList({
     <div className="sidebar-section">
       <div className="section-header">
         <h2>Recommendations</h2>
+        <span className={`mode-badge ${mode}`}>
+          {mode === "realtime" ? "🟢 Live" : "🔮 Forecast"}
+        </span>
+        {mode === "forecast" && forecastTime && (
+          <span className="forecast-time-label">{forecastTime}</span>
+        )}
         {results.length > 0 && (
           <select
             className="sort-select"

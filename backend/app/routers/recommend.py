@@ -62,8 +62,21 @@ def recommend(
     lng: float = Query(..., ge=-180, le=180, description="User longitude (WGS84)"),
     n: int = Query(default=5, ge=1, le=10, description="Number of results"),
     radius_m: int = Query(default=3000, ge=100, le=5000, description="Search radius in metres"),
+    forecast_time: str | None = Query(default=None, description="Target time for forecast (ISO 8601, e.g. 2026-08-04T18:00:00+08:00)"),
 ):
     t0 = time.perf_counter()
+
+    # 0. Parse forecast_time → if provided, use for ML predictions
+    target_dt: datetime | None = None
+    is_forecast = False
+    if forecast_time:
+        try:
+            target_dt = datetime.fromisoformat(forecast_time)
+            if target_dt.tzinfo is None:
+                target_dt = target_dt.replace(tzinfo=SGT)
+            is_forecast = True
+        except ValueError:
+            raise HTTPException(status_code=422, detail=f"Invalid forecast_time: {forecast_time}")
 
     # 1. Geospatial query
     carparks = query_nearby_carparks(lat, lng, radius_m, n * 2)  # get more for scoring
@@ -76,7 +89,7 @@ def recommend(
 
     # 2. Run predictions (ML model → LLM → heuristic fallback)
     try:
-        preds = predict(carparks)
+        preds = predict(carparks, target_time=target_dt)
     except Exception as e:
         log.warning("Prediction failed: %s, using DB values", e)
         preds = [
@@ -86,7 +99,7 @@ def recommend(
 
     # 3. Composite scoring
     max_dist = max(cp["distance_m"] for cp in carparks) or 1
-    now_hour = datetime.now(SGT).hour
+    now_hour = target_dt.hour if target_dt else datetime.now(SGT).hour
     results = []
 
     for cp, pred in zip(carparks, preds):
@@ -144,4 +157,6 @@ def recommend(
     return RecommendResponse(
         results=[r[1] for r in results],
         query_time_ms=round(elapsed_ms, 1),
+        mode="forecast" if is_forecast else "realtime",
+        forecast_time=forecast_time if is_forecast else None,
     )

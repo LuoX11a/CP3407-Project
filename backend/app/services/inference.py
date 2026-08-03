@@ -155,13 +155,19 @@ def _heuristic_predict(carparks: list[dict]) -> list[float]:
 
 # ── Main predict ──────────────────────────────────────────
 
-def predict(carparks: list[dict]) -> list[float]:
+def predict(
+    carparks: list[dict],
+    target_time: datetime | None = None,
+) -> list[float]:
     """
     Predict vacancy rates for a list of carparks.
     Priority: ML model (with k-NN proxy for non-EPS) > LLM > heuristic.
+
+    If target_time is provided, predictions are made for that time.
+    Otherwise, current Singapore time is used.
     """
+    now = target_time if target_time else datetime.now(SGT)
     if _predictor is not None:
-        now = datetime.now(SGT)
         rows = []
         for cp in carparks:
             rows.append({

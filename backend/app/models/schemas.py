@@ -49,6 +49,8 @@ class RecommendResponse(BaseModel):
     results: list[CarparkResult]
     query_time_ms: float
     attribution: str = "Data sourced from Data.gov.sg and NEA"
+    mode: str = Field(default="realtime", description="realtime | forecast")
+    forecast_time: str | None = Field(default=None, description="Target time for forecast mode (ISO 8601)")
 
 
 # ── Carpark detail ──────────────────────────────────────

@@ -14,6 +14,10 @@ export default function App() {
   const [apiError, setApiError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
 
+  // Mode: "realtime" (show current data) | "forecast" (predict future)
+  const [mode, setMode] = useState("realtime");
+  const [forecastTime, setForecastTime] = useState("");
+
   // Auth state — restores from localStorage on page load, cleared on logout
   const [authUser, setAuthUser] = useState(() => {
     const stored = localStorage.getItem("user");
@@ -66,13 +70,14 @@ export default function App() {
     }
   }, [isLoggedIn]);
 
-  // Fetch recommendations when userLocation changes
+  // Fetch recommendations when userLocation or mode/forecast changes
   const loadRecommendations = useCallback(async () => {
     if (!userLocation) return;
     setLoading(true);
     setApiError(null);
     try {
-      const data = await fetchRecommendations(userLocation[0], userLocation[1], 5, 3000);
+      const forecastParam = mode === "forecast" && forecastTime ? forecastTime : null;
+      const data = await fetchRecommendations(userLocation[0], userLocation[1], 5, 3000, forecastParam);
       setResults(data.results || []);
       if (data.results?.length > 0 && !selectedId) {
         setSelectedId(data.results[0].carpark_id);
@@ -82,11 +87,11 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [userLocation, selectedId]);
+  }, [userLocation, selectedId, mode, forecastTime]);
 
   useEffect(() => {
     loadRecommendations();
-  }, [userLocation]);
+  }, [loadRecommendations]);
 
   const handleSelect = useCallback((cp) => {
     setSelectedId(cp.carpark_id);
@@ -164,6 +169,30 @@ export default function App() {
         <div>
           <h1>ParkGuideSG</h1>
           <div className="subtitle">Real-time HDB carpark recommendations</div>
+        </div>
+
+        <div className="mode-toggle">
+          <button
+            className={`mode-btn ${mode === "realtime" ? "active" : ""}`}
+            onClick={() => setMode("realtime")}
+          >
+            🚗 Now
+          </button>
+          <button
+            className={`mode-btn ${mode === "forecast" ? "active" : ""}`}
+            onClick={() => setMode("forecast")}
+          >
+            📅 Plan Ahead
+          </button>
+          {mode === "forecast" && (
+            <input
+              type="datetime-local"
+              className="time-picker"
+              value={forecastTime}
+              onChange={(e) => setForecastTime(e.target.value)}
+              placeholder="Select date & time"
+            />
+          )}
         </div>
 
         <form className="search-form" onSubmit={handleSearch}>
@@ -272,6 +301,8 @@ export default function App() {
             onToggleFavourite={handleToggleFavourite}
             isLoggedIn={isLoggedIn}
             locationLoading={locationLoading}
+            mode={mode}
+            forecastTime={forecastTime}
           />
         </div>
       </div>

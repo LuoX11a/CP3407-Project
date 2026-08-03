@@ -20,8 +20,11 @@ async function request(path, options = {}) {
 
 // ── Recommendations ──────────────────────────────────────
 
-export function fetchRecommendations(lat, lng, n = 5, radiusM = 1000) {
+export function fetchRecommendations(lat, lng, n = 5, radiusM = 1000, forecastTime = null) {
   const params = new URLSearchParams({ lat, lng, n, radius_m: radiusM });
+  if (forecastTime) {
+    params.set("forecast_time", forecastTime);
+  }
   return request(`/recommend?${params}`);
 }
 

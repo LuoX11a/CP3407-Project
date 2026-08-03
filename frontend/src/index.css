@@ -26,6 +26,81 @@ body {
   justify-content: space-between;
   border-bottom: 1px solid #0f3460;
   z-index: 1000;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Mode Toggle ────────────────── */
+
+.mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mode-btn {
+  padding: 6px 14px;
+  border: 1px solid #0f3460;
+  border-radius: 20px;
+  background: transparent;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.mode-btn:hover {
+  color: #ccc;
+  border-color: #2563eb;
+}
+
+.mode-btn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+  font-weight: 600;
+}
+
+.time-picker {
+  padding: 5px 10px;
+  border: 1px solid #0f3460;
+  border-radius: 8px;
+  background: #1a1a2e;
+  color: #eee;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.time-picker:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+/* ── Mode Badge ─────────────────── */
+
+.mode-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mode-badge.realtime {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+.mode-badge.forecast {
+  background: #4a1d96;
+  color: #c4b5fd;
+}
+
+.forecast-time-label {
+  font-size: 11px;
+  color: #888;
+  margin-left: 4px;
 }
 
 .header h1 {
