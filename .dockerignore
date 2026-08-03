@@ -1,7 +1,6 @@
 __pycache__/
 *.pyc
 *.pyo
-*.joblib
 .env
 *.egg-info/
 .venv/
@@ -11,5 +10,6 @@ node_modules/
 .github/
 *.docx
 frontend/node_modules/
-ml/model/*
-!ml/model/carpark_predictor.joblib
+# Keep ml/model/ but allow the trained model file
+ml/model/trial_model.joblib
+# DO NOT ignore carpark_predictor.joblib — it's the deployed model
