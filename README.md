@@ -93,7 +93,3 @@ Open `http://localhost:5173`
 - **Weather**: 31,302 records from 47 NEA stations
 - **Source**: Data.gov.sg APIs, frozen for final demo on 2026-08-03
 
-## Team
-
-- LuoX11a | Vince-1206 | LauTszTsun
-- CP3407 — James Cook University Singapore
