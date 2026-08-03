@@ -55,6 +55,25 @@ async def lifespan(app: FastAPI):
             log.info("Migration %s skipped: %s", _sql_file.name, _e)
 
     model_path = os.getenv("MODEL_PATH", "ml/model/carpark_predictor.joblib")
+    _model_url = os.getenv(
+        "MODEL_URL",
+        "https://github.com/LuoX11a/CP3407-Project/releases/download/final-model-v2/carpark_predictor.joblib",
+    )
+
+    # Ensure model directory exists
+    os.makedirs(os.path.dirname(model_path) or ".", exist_ok=True)
+
+    # Download model from GitHub Release if not present locally
+    if not os.path.exists(model_path):
+        log.info("Model not found locally, downloading from %s ...", _model_url)
+        try:
+            import urllib.request
+            urllib.request.urlretrieve(_model_url, model_path)
+            log.info("Model downloaded to %s (%.1f KB)",
+                     model_path, os.path.getsize(model_path) / 1024)
+        except Exception as _dl_err:
+            log.warning("Model download failed: %s", _dl_err)
+
     try:
         if os.path.exists(model_path):
             load_model(model_path)
