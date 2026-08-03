@@ -11,4 +11,5 @@ node_modules/
 .github/
 *.docx
 frontend/node_modules/
-ml/model/
+ml/model/*
+!ml/model/carpark_predictor.joblib
