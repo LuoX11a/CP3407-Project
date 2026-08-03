@@ -2,7 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# 2026-08-03: Final demo — include ML model (ensure .dockerignore allows *.joblib)
 ENV PYTHONPATH=/app/backend
+ENV MODEL_PATH=ml/model/carpark_predictor.joblib
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
