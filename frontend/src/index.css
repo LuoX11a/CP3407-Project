@@ -167,36 +167,35 @@ body {
 }
 
 /* ══════════════════════════════════════════
-   MODE BAR — floating above bottom sheet
+   MODE BAR — inside bottom sheet, always visible
    ══════════════════════════════════════════ */
 
 .mode-bar {
-  position: absolute;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 800;
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: var(--surface);
-  padding: 5px;
+  justify-content: center;
+  gap: 4px;
+  background: var(--surface-alt);
+  padding: 6px;
+  margin: 0 12px;
   border-radius: 28px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.12);
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .mode-btn {
-  padding: 10px 18px;
+  flex: 1;
+  padding: 12px 16px;
   border: none;
   border-radius: 24px;
   background: transparent;
   color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  text-align: center;
 }
 
 .mode-btn:hover { color: var(--text); }
@@ -208,19 +207,21 @@ body {
 }
 
 .time-picker {
-  padding: 8px 12px;
-  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border: 2px dashed var(--border);
   border-radius: 20px;
-  background: var(--surface-alt);
+  background: var(--surface);
   color: var(--text);
   font-size: 13px;
   font-family: inherit;
   color-scheme: light;
+  margin: 0 4px;
 }
 
 .time-picker:focus {
   outline: none;
   border-color: var(--accent);
+  border-style: solid;
 }
 
 /* ══════════════════════════════════════════
@@ -649,16 +650,11 @@ body {
   }
 
   .mode-bar {
-    bottom: auto;
-    top: 72px;
-    left: auto;
-    right: 20px;
-    transform: none;
+    margin: 0 16px;
   }
 
   .mode-btn {
-    padding: 8px 16px;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .recenter-btn {
@@ -726,20 +722,21 @@ body {
   }
 
   .mode-bar {
-    bottom: 80px;
-    gap: 3px;
+    margin: 0 8px;
     padding: 4px;
+    gap: 2px;
   }
 
   .mode-btn {
-    padding: 10px 14px;
-    font-size: 13px;
+    padding: 12px 8px;
+    font-size: 14px;
+    font-weight: 700;
   }
 
   .time-picker {
     font-size: 12px;
-    padding: 8px 10px;
-    max-width: 130px;
+    padding: 10px 8px;
+    max-width: 120px;
   }
 
   .recenter-btn {

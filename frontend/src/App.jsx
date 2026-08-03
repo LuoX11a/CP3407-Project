@@ -51,7 +51,8 @@ export default function App() {
       return;
     }
 
-    const watchId = navigator.geolocation.watchPosition(
+    // Get position once — don't continuously track (avoids UI jumping)
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
         setUserLocation([pos.coords.latitude, pos.coords.longitude]);
         setLocationError(null);
@@ -62,10 +63,8 @@ export default function App() {
         setUserLocation([1.3521, 103.8198]);
         setLocationLoading(false);
       },
-      { enableHighAccuracy: true, maximumAge: 60000, timeout: 10000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
     );
-
-    return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
   // Load favourites
@@ -86,14 +85,19 @@ export default function App() {
     }
   }, [sheetExpanded, results]);
 
-  // Fetch recommendations
+  // Store latest userLocation in a ref so timer always has current value
+  const locationRef = useRef(userLocation);
+  locationRef.current = userLocation;
+
+  // Fetch recommendations — not dependent on userLocation (only runs on timer/mode change)
   const loadRecommendations = useCallback(async () => {
-    if (!userLocation) return;
+    const loc = locationRef.current;
+    if (!loc) return;
     setLoading(true);
     setApiError(null);
     try {
       const forecastParam = mode === "forecast" && forecastTime ? forecastTime : null;
-      const data = await fetchRecommendations(userLocation[0], userLocation[1], 8, 3000, forecastParam);
+      const data = await fetchRecommendations(loc[0], loc[1], 8, 3000, forecastParam);
       setResults(data.results || []);
       if (data.results?.length > 0 && !selectedId) {
         setSelectedId(data.results[0].carpark_id);
@@ -103,19 +107,26 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [userLocation, selectedId, mode, forecastTime]);
+  }, [selectedId, mode, forecastTime]);
 
-  // Initial load + fixed interval refresh
+  // Initial load on mount, then fixed interval — NOT on every dependency change
   useEffect(() => {
+    if (!userLocation) return;
     loadRecommendations();
     const timer = setInterval(loadRecommendations, REFRESH_INTERVAL);
     return () => clearInterval(timer);
-  }, [loadRecommendations]);
+  }, [userLocation]); // only re-run when we first get location
 
-  // Reload when mode or forecastTime changes
+  // Reload immediately when mode or forecastTime changes (user action)
+  const prevMode = useRef(mode);
+  const prevForecast = useRef(forecastTime);
   useEffect(() => {
-    loadRecommendations();
-  }, [mode, forecastTime]);
+    if (prevMode.current !== mode || prevForecast.current !== forecastTime) {
+      prevMode.current = mode;
+      prevForecast.current = forecastTime;
+      loadRecommendations();
+    }
+  }, [mode, forecastTime, loadRecommendations]);
 
   const handleSelect = useCallback((cp) => {
     setSelectedId(cp.carpark_id);
@@ -226,44 +237,43 @@ export default function App() {
           </div>
         </header>
 
-        {/* Mode toggle — floating above bottom sheet */}
-        <div className="mode-bar">
-          <button
-            className={`mode-btn ${mode === "realtime" ? "active" : ""}`}
-            onClick={() => setMode("realtime")}
-          >
-            🟢 Now
-          </button>
-          <button
-            className={`mode-btn ${mode === "forecast" ? "active" : ""}`}
-            onClick={() => setMode("forecast")}
-          >
-            🔮 Plan Ahead
-          </button>
-          {mode === "forecast" && (
-            <input
-              type="datetime-local"
-              className="time-picker"
-              value={forecastTime}
-              onChange={(e) => setForecastTime(e.target.value)}
-              min={defaultForecastTime}
-            />
-          )}
-        </div>
-
         {/* Bottom sheet — results overlay */}
         <div
           ref={sheetRef}
           className={`bottom-sheet ${sheetExpanded ? "expanded" : "collapsed"}`}
         >
+          {/* Mode toggle — inside the sheet, always visible */}
+          <div className="mode-bar">
+            <button
+              className={`mode-btn ${mode === "realtime" ? "active" : ""}`}
+              onClick={() => setMode("realtime")}
+            >
+              🟢 Now
+            </button>
+            <button
+              className={`mode-btn ${mode === "forecast" ? "active" : ""}`}
+              onClick={() => setMode("forecast")}
+            >
+              🔮 Plan Ahead
+            </button>
+            {mode === "forecast" && (
+              <input
+                type="datetime-local"
+                className="time-picker"
+                value={forecastTime}
+                onChange={(e) => setForecastTime(e.target.value)}
+                min={defaultForecastTime}
+              />
+            )}
+          </div>
+
           <div
             className="sheet-handle"
             onClick={() => setSheetExpanded(!sheetExpanded)}
           >
             <div className="handle-bar" />
             <span className="handle-label">
-              {results.length} carparks nearby
-              {sheetExpanded ? " — tap to collapse" : " — tap to expand"}
+              {results.length} carparks nearby — tap to {sheetExpanded ? "collapse" : "expand"}
             </span>
           </div>
 
