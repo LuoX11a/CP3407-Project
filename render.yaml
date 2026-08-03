@@ -15,3 +15,5 @@ services:
         value: deepseek-chat
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: MODEL_URL
+        value: https://github.com/LuoX11a/CP3407-Project/releases/download/final-model-v2/carpark_predictor.joblib
